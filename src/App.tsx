@@ -22,6 +22,7 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/hackathon-platform" element={<HomePage />} />
             <Route path="/hackathons" element={<HackathonsPage />} />
             <Route path="/hackathons/:id" element={<HackathonDetailsPage />} />
             <Route path="/login" element={<LoginPage />} />

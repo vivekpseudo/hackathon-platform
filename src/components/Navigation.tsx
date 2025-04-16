@@ -12,7 +12,7 @@ const Navigation: React.FC = () => {
   };
 
   return (
-    <nav className="bg-white shadow-md py-4">
+    <nav className="bg-white shadow-md p-4">
       <div className="container mx-auto flex items-center justify-between">
         <Link to="/" className="text-xl font-bold text-blue-500">Innothon</Link>
         <div className="hidden md:flex items-center space-x-4"> {/* Desktop navigation */}

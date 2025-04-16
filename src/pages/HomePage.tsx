@@ -29,7 +29,7 @@ const HomePage: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Hero Section */}
-      <section className="bg-blue-50 py-16 rounded-md"> {/* Lighter blue background */}
+      <section className="bg-blue-50 py-16 px-8 rounded-md"> {/* Lighter blue background */}
         <div className="container mx-auto text-center">
           <h1 className="text-4xl font-bold text-blue-700 mb-4">Unleash Your Innovation in Global Hackathons</h1>
           <p className="text-lg text-gray-700 mb-8">Join a vibrant community of developers, designers, and innovators. Discover exciting hackathons and turn your ideas into reality.</p>
@@ -57,7 +57,7 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Why Join Us Section */}
-      <section className="bg-gray-50 py-12 rounded-md"> {/* Very light gray background */}
+      <section className="bg-gray-50 py-12 px-8 rounded-md"> {/* Very light gray background */}
         <div className="container mx-auto text-center">
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">Why Join Our Platform?</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
