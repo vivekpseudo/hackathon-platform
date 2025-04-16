@@ -6,13 +6,16 @@
   "type": "module",
   "scripts": {
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
+    "deploy": "gh-pages -d dist-git",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "jest",
+    "start": "vite"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@tailwindcss/vite": "^4.1.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
