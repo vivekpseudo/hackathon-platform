@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext'; // Import useAuth
 
 const RegisterPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const { login } = useAuth(); // Get the login function
+  const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     if (password !== confirmPassword) {
       alert("Passwords do not match!");
@@ -15,8 +18,9 @@ const RegisterPage: React.FC = () => {
     }
     // In a real application, you would send this registration data to a backend
     console.log('Registration data:', { name, email, password });
-    alert(`Registering with Name: ${name}, Email: ${email}, Password: ${password}`);
-    // After successful registration, you would typically redirect the user or log them in
+    // Simulate successful registration and log in as a regular user
+    login('user');
+    navigate('/');
   };
 
   return (

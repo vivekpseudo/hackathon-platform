@@ -1,16 +1,28 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext'; // Import useAuth
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { login } = useAuth(); // Get the login function
+  const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     // In a real application, you would send this data to a backend for authentication
     console.log('Login data:', { email, password });
-    alert(`Logging in with Email: ${email}, Password: ${password}`);
-    // After successful login, you would typically redirect the user
+    // Simulate successful login and set a role based on email (for now)
+    if (email === 'admin@example.com') {
+      login('admin');
+      navigate('/admin/hackathons');
+    } else if (email === 'judge@example.com') {
+      login('judge');
+      navigate('/judge/dashboard');
+    } else {
+      login('user');
+      navigate('/');
+    }
   };
 
   return (

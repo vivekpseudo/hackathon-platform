@@ -22,14 +22,15 @@ const evaluationCriteria = [
 const SubmissionReviewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>(); // Submission ID
   const submissionId = id; // For now, we're just using the ID from the route
-  const [scores, setScores] = useState({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [scores, setScores] = useState<any>({});
   const [feedback, setFeedback] = useState('');
 
-  const handleScoreChange = (criterionId, value) => {
+  const handleScoreChange = (criterionId: string, value: string) => {
     setScores({ ...scores, [criterionId]: parseInt(value) });
   };
 
-  const handleFeedbackChange = (event) => {
+  const handleFeedbackChange = (event: { target: { value: React.SetStateAction<string>; }; }) => {
     setFeedback(event.target.value);
   };
 

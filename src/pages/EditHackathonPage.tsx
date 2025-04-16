@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 
+const adminHackathons = [
+  { id: 1, title: 'Hackathon 1', description: 'Description 1', startDate: '2023-10-01', endDate: '2023-10-05', location: 'Location 1', prize: 'Prize 1' },
+  { id: 2, title: 'Hackathon 2', description: 'Description 2', startDate: '2023-11-01', endDate: '2023-11-05', location: 'Location 2', prize: 'Prize 2' },
+];
 // Placeholder function to fetch hackathon data by ID
-const fetchHackathonById = (id) => {
+const fetchHackathonById = (id: string | undefined) => {
   // In a real application, this would fetch data from the backend
-  return adminHackathons.find((hackathon) => hackathon.id === parseInt(id));
+  return adminHackathons.find((hackathon: { id: number; }) => hackathon.id === parseInt(id as string));
 };
 
 const EditHackathonPage: React.FC = () => {
@@ -33,10 +37,10 @@ const EditHackathonPage: React.FC = () => {
     }
   }, [hackathonId, navigate]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     // In a real application, you would send this data to the backend to update the hackathon
-    const updatedHackathon = { id: parseInt(hackathonId), title, description, startDate, endDate, location, prize };
+    const updatedHackathon = { id: parseInt(hackathonId as string), title, description, startDate, endDate, location, prize };
     console.log('Updating hackathon:', updatedHackathon);
     alert(`Hackathon with ID ${hackathonId} updated!`);
     navigate('/admin/hackathons');

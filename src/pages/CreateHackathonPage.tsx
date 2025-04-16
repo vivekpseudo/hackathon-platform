@@ -10,7 +10,7 @@ const CreateHackathonPage: React.FC = () => {
   const [prize, setPrize] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     // In a real application, you would send this data to the backend to create a new hackathon
     const newHackathon = { title, description, startDate, endDate, location, prize };

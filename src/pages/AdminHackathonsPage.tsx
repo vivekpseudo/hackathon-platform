@@ -9,7 +9,7 @@ const adminHackathons = [
 ];
 
 const AdminHackathonsPage: React.FC = () => {
-  const handleDeleteHackathon = (id) => {
+  const handleDeleteHackathon = (id: number) => {
     // In a real application, this would send a request to the backend to delete the hackathon
     console.log(`Deleting hackathon with ID: ${id}`);
     alert(`Hackathon with ID ${id} deleted!`);

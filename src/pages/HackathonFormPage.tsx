@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 // Placeholder function to simulate fetching a hackathon for editing
-const fetchHackathon = (id) => {
-  return hackathons.find((h) => h.id === parseInt(id));
+const fetchHackathon = (id: unknown) => {
+  return hackathons.find((h) => h.id === parseInt(id as string));
 };
 
 // Placeholder data (same as in HackathonManagementPage for now)
@@ -17,6 +17,7 @@ const HackathonFormPage: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const isEditing = !!id;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialHackathon = isEditing ? fetchHackathon(id) : { title: '', startDate: '', endDate: '' };
 
   const [title, setTitle] = useState(initialHackathon?.title || '');
@@ -30,7 +31,7 @@ const HackathonFormPage: React.FC = () => {
     }
   }, [isEditing, initialHackathon, navigate]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     const hackathonData = { title, startDate, endDate };
     if (isEditing) {

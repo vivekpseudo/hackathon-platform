@@ -55,7 +55,7 @@ const currentLoggedInUser = 'userD';
 
 const HackathonDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const hackathonId = parseInt(id);
+  const hackathonId = parseInt(id as string, 10);
   const hackathon = allHackathonsWithTeams.find((h) => h.id === hackathonId);
   const [newTeamName, setNewTeamName] = useState('');
 
@@ -71,7 +71,7 @@ const HackathonDetailsPage: React.FC = () => {
     );
   }
 
-  const handleCreateTeam = (event) => {
+  const handleCreateTeam = (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     if (newTeamName.trim() !== '') {
       // In a real application, you would send this to a backend to create a new team
@@ -84,14 +84,15 @@ const HackathonDetailsPage: React.FC = () => {
     }
   };
 
-  const handleJoinTeam = (teamId) => {
+  const handleJoinTeam = (teamId: string) => {
     // In a real application, you would send a request to the backend to add the current user to the team
     console.log(`${currentLoggedInUser} wants to join team ${teamId} for hackathon ${hackathon.id}`);
     alert(`Request sent to join team ${teamId}!`);
     // You would also need to update the local state or refetch data
   };
 
-  const handleProjectSubmit = (event) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleProjectSubmit = (event: any) => {
     event.preventDefault();
     const projectTitle = event.target.projectTitle.value;
     const projectDescription = event.target.projectDescription.value;

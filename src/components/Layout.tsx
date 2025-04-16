@@ -6,17 +6,17 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-    return (
-      <div className="bg-white min-h-screen"> {/* Changed background to white */}
-        <Navigation />
-        <main className="container mx-auto py-8">
-          {children}
-        </main>
-        <footer className="bg-gray-100 text-center py-4 text-sm text-gray-600"> {/* Adjusted footer background */}
-          &copy; {new Date().getFullYear()} Hackathon Platform
-        </footer>
-      </div>
-    );
-  };
+  return (
+    <div className="bg-white min-h-screen flex flex-col"> {/* Added flex and flex-col */}
+      <Navigation />
+      <main className="container mx-auto py-8 flex-grow"> {/* Added flex-grow to main */}
+        {children}
+      </main>
+      <footer className="bg-gray-100 text-center py-4 text-sm text-gray-600">
+        &copy; {new Date().getFullYear()} Innothon
+      </footer>
+    </div>
+  );
+};
 
 export default Layout;

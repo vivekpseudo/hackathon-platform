@@ -33,7 +33,7 @@ const teamsSeekingMembers = [
   const currentLoggedInUser = 'userD';
   
   // Placeholder function (you can keep the existing one)
-  const handleRequestToJoin = (teamId) => {
+  const handleRequestToJoin = (teamId: string) => {
     console.log(`${currentLoggedInUser} wants to join team ${teamId}`);
     alert(`Request sent to join team ${teamId}!`);
   };
