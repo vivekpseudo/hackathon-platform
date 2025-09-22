@@ -1,0 +1,6 @@
+.home-page {
+    background-image: url('/src/assets/bg_main.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: top right;        
+}

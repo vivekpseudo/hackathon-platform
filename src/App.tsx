@@ -13,6 +13,8 @@ import HackathonFormPage from "./pages/HackathonFormPage";
 import { AuthProvider } from "./context/AuthContext"; // Import AuthProvider
 import ProtectedRoute from "./ProtectedRoute"; // Import ProtectedRoute
 
+import "./App.css"; // Import your CSS file
+
 function App() {
   return (
     <AuthProvider>
