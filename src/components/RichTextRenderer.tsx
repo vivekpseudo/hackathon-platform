@@ -1,5 +1,5 @@
 // src/components/RichTextRenderer.tsx
-import React from "react";
+import React, { JSX } from "react";
 import { NodeType, TextNode } from "../types/richText";
 
 interface Props {

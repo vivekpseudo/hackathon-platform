@@ -1,0 +1,41 @@
+interface HtmlContent   {
+    type: "heading" | "paragraph" | "link" | "text";
+    level?: number;
+    url?: string;
+    bold?: boolean;
+    children: HtmlContent[];
+    text?: string;
+} 
+
+interface Competition {
+  Title: string;
+  startDate: string;
+  endDate: string;
+  isActive: true;
+  isCompleted: false;
+  createdAt: string;
+  updatedAt:string;
+  publishedAt: string;
+  type: "Online" | "Offline";
+  minMember: number;
+  maxMember: number;
+  feeType: "Paid" | "Free";
+  feePerMember: number;
+  feePerTeam: number;
+  isFeeForTeam: boolean;
+  description: Array<HtmlContent>;
+}
+
+// define detailed competition interface extending basic competition
+interface CompetitionDetail extends Competition {
+    competition_category: any; //TODO: define category type
+    competition_contact: any; //TODO: contact type
+    competition_organiser: any; //TODO: organiser type
+    competition_timelines: any; //TODO: timeline type
+    competition_rewards: any; //TODO: reward type
+}
+
+interface ObjectResponseType<T> {
+  id: number;
+  attributes: T;
+}
