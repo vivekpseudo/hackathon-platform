@@ -8,7 +8,7 @@ const HackathonsPage: React.FC = () => {
   const { getCompetitionsData } = useCompetitions();
   const { data, isSuccess } = getCompetitionsData;
 
-  const hackathons = isSuccess && data ? data.map(d => ({ ...d, ...d.attributes })) : [];
+  const hackathons = isSuccess && data.data ? data.data.map(d => ({ ...d, ...d.attributes })) : [];
   console.log('Fetched competitions data:', hackathons); // Debug log
 
   return (
