@@ -1,69 +1,30 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-
-// Placeholder data for all hackathons (including team info)
-const allHackathonsWithTeams = [
-  {
-    id: 1,
-    title: 'Global Innovation Challenge 2025',
-    description: 'A worldwide hackathon focused on solving global issues.',
-    startDate: '2025-05-15',
-    endDate: '2025-05-20',
-    location: 'Online',
-    prize: '$50,000',
-    rules: ['Teams of 2-5 members are allowed.', 'Projects must be submitted by the deadline.', 'Winners will be judged based on innovation, impact, and feasibility.'],
-    timeline: [
-      { date: '2025-05-15', event: 'Hackathon Begins' },
-      { date: '2025-05-18', event: 'Mid-point Check-in' },
-      { date: '2025-05-20', event: 'Submission Deadline' },
-      { date: '2025-05-25', event: 'Winners Announced' },
-    ],
-    faqs: [
-      { question: 'Can individuals participate?', answer: 'Yes, you can participate individually or as part of a team.' },
-      { question: 'Is there a registration fee?', answer: 'No, registration for this hackathon is completely free.' },
-    ],
-    teams: [
-      { id: 'team1', name: 'The Innovators', members: ['userA', 'userB'] },
-      { id: 'team2', name: 'Code Wizards', members: ['userC'] },
-    ],
-  },
-  {
-    id: 2,
-    title: 'Mobile App Development Hackathon',
-    description: 'Build the next great mobile application.',
-    startDate: '2025-06-01',
-    endDate: '2025-06-07',
-    location: 'San Francisco, USA',
-    prize: 'Mentorship & Seed Funding',
-    rules: ['Apps must be developed for either iOS or Android.', 'Use of third-party libraries is permitted.', 'Final submissions must include a working prototype and a short presentation.'],
-    timeline: [
-      { date: '2025-06-01', event: 'Hackathon Launch' },
-      { date: '2025-06-03', event: 'Workshop: UI/UX Design' },
-      { date: '2025-06-07', event: 'Final Submission & Judging' },
-    ],
-    faqs: [
-      { question: 'Can we use cross-platform frameworks?', answer: 'Yes, you are welcome to use frameworks like React Native or Flutter.' },
-      { question: 'Will there be mentors available?', answer: 'Yes, experienced mentors will be available to provide guidance.' },
-    ],
-    teams: [], // No teams yet for this hackathon
-  },
-  // ... more hackathons
-];
-
+import { useGetCompetition } from '../hooks/useCompetitions';
 // Simulate a logged-in user
 const currentLoggedInUser = 'userD';
 
 const HackathonDetailsPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const hackathonId = parseInt(id as string, 10);
-  const hackathon = allHackathonsWithTeams.find((h) => h.id === hackathonId);
+  const { id } = useParams();
+  const {data, isLoading, isSuccess } = useGetCompetition(Number(id));
   const [newTeamName, setNewTeamName] = useState('');
 
-  if (!hackathon) {
+  let hackathon = {} as CompetitionDetail;
+  if (isLoading) {
+    return <div className="container mx-auto py-8">Loading hackathon details...</div>;
+  } 
+  if (isSuccess && data && data.data) {
+    hackathon = { ...data.data.attributes, id: data.data.id };
+  }
+
+  console.log('hackathon data:', hackathon); // Debug log
+  
+
+  if (isSuccess && !hackathon) {
     return (
       <div className="container mx-auto py-8">
         <h1 className="text-2xl font-bold text-gray-800 mb-4">Hackathon Not Found</h1>
-        <p className="text-gray-600">The hackathon with ID {hackathonId} could not be found.</p>
+        <p className="text-gray-600">The hackathon with ID {id} could not be found.</p>
         <Link to="/hackathons" className="inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4">
           Back to Hackathons
         </Link>
@@ -112,15 +73,15 @@ const HackathonDetailsPage: React.FC = () => {
 
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold text-blue-700 mb-4">{hackathon.title}</h1>
-      <p className="text-lg text-gray-700 mb-6">{hackathon.description}</p>
+      <h1 className="text-3xl font-bold text-blue-700 mb-4">{hackathon.Title}</h1>
+      {/* <p className="text-lg text-gray-700 mb-6">{hackathon.description}</p> */}
 
       {/* Details, Rules, Timeline, FAQs (as before) */}
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-gray-800 mb-2">Details</h2>
         <p className="text-gray-600 mb-1">Starts: {new Date(hackathon.startDate).toLocaleDateString()}</p>
         <p className="text-gray-600 mb-1">Ends: {new Date(hackathon.endDate).toLocaleDateString()}</p>
-        {hackathon.location && <p className="text-gray-600 mb-1">Location: {hackathon.location}</p>}
+        {hackathon.type && <p className="text-gray-600 mb-1">Mode: {hackathon.type}</p>}
         {hackathon.prize && <p className="text-green-600 font-semibold">Prize: {hackathon.prize}</p>}
       </div>
 
