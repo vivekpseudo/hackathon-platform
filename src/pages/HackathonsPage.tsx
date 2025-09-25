@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useCompetitions } from '../hooks/useEvent';
+import { useCompetitions } from '../hooks/useCompetitions';
 import RichTextRenderer from "../components/RichTextRenderer";
 import { NodeType } from "../types/richText";
 

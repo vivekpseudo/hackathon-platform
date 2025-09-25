@@ -33,6 +33,7 @@ interface CompetitionDetail extends Competition {
     competition_organiser: any; //TODO: organiser type
     competition_timelines: any; //TODO: timeline type
     competition_rewards: any; //TODO: reward type
+    id: number
 }
 
 interface ObjectResponseType<T> {
