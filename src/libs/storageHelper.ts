@@ -31,3 +31,7 @@ export const setUser = (user: any) => {
 export const logout = () => {
   localStorage.clear();
 };
+
+export const isAuthenticated = () => {
+  return !!getAuthToken();
+};

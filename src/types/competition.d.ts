@@ -40,3 +40,41 @@ interface ObjectResponseType<T> {
   id: number;
   attributes: T;
 }
+
+export interface CompetitionFormInput {
+  Title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  type: string;
+  feeType: string;
+  feePerMember: number;
+  feePerTeam: number;
+  isFeeForTeam: boolean;
+  isActive: boolean;
+  isCompleted: boolean;
+  minMember: number;
+  maxMember: number;
+  competition_organiser: {
+    name: string;
+  };
+  competition_contact: {
+    contactName: string;
+    email: string;
+    phonenumber: string;
+  };
+  competition_rewards: {
+    title: string;
+  }[];
+  competition_timelines: {
+    title: string;
+    description: string;
+    startDate: string;
+    endDate: string;
+  }[];
+  competition_category: any[];
+  images: any[];
+  helpDocs: any[];
+}
+
+
