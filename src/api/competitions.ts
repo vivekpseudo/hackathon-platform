@@ -1,6 +1,7 @@
-import { makeGetRequest } from "../libs/axios";
+import { makeGetRequest, makePostRequest,makePutRequest } from "../libs/axios";
 import qs from "qs";
-
+import {  ObjectResponseType } from "../types/competition";
+import { Competition, CompetitionDetail, CompetitionFormInput } from "../types/competition";
 export const getCompetitions = async (
   pageNumber: number = 0,
   pageSize: number = 10,
@@ -33,6 +34,25 @@ export const getCompetitionById = async (
     return response as ApiResponseType<ObjectResponseType<CompetitionDetail>>;
   } catch (error) {
     console.error(`Error fetching competition with ID ${id}:`, error);
+    throw error;
+  }
+};
+export const createCompetition = async (formData: CompetitionFormInput) => {
+  try {
+    const response = await makePostRequest("competitions", { data: formData });
+    return response.data;
+  } catch (error: any) {
+    console.error("Error creating competition:", error.response || error.message || error);
+    throw error;
+  }
+};
+
+export const updateCompetition = async (id: number, formData: CompetitionFormInput) => {
+  try {
+    const response = await makePutRequest(`competitions/${id}`, { data: formData });
+    return response.data;
+  } catch (error) {
+    console.error("Error updating competition:", error);
     throw error;
   }
 };
