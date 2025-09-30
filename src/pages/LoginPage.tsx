@@ -1,36 +1,52 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // Import useAuth
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
+import { useLocalAuth } from "../context/AuthContext";
 
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { login } = useAuth(); // Get the login function
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const { mutate } = useAuth(); // Get the login function
   const navigate = useNavigate();
+  const { login } = useLocalAuth();
 
-  const handleSubmit = (event: { preventDefault: () => void; }) => {
+  const handleSubmit = (event: { preventDefault: () => void }) => {
     event.preventDefault();
-    // In a real application, you would send this data to a backend for authentication
-    console.log('Login data:', { email, password });
-    // Simulate successful login and set a role based on email (for now)
-    if (email === 'admin@example.com') {
-      login('admin');
-      navigate('/admin/hackathons');
-    } else if (email === 'judge@example.com') {
-      login('judge');
-      navigate('/judge/dashboard');
-    } else {
-      login('user');
-      navigate('/');
-    }
+    mutate(
+      { email, password },
+      {
+        onSuccess: (data) => {
+          login(data.user.isOrganizer ? "admin" : "user"); // Update context with user role
+          // Redirect based on role
+          if (data.user.isOrganizer) {
+            navigate("/admin/hackathons");
+          } else if (data.user.role === "judge") {
+            navigate("/judge/dashboard");
+          } else {
+            navigate("/");
+          }
+        },
+        onError: (error) => {
+          // Handle login error (e.g., show a message)
+          console.error("Login failed:", error);
+          alert("Login failed. Please check your credentials and try again.");
+        },
+      }
+    );
   };
 
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Login</h1>
-      <form onSubmit={handleSubmit} className="max-w-md mx-auto bg-white shadow-md rounded-md p-6">
+      <form
+        onSubmit={handleSubmit}
+        className="max-w-md mx-auto bg-white shadow-md rounded-md p-6"
+      >
         <div className="mb-4">
-          <label htmlFor="email" className="block text-gray-700 text-sm font-bold mb-2">
+          <label
+            htmlFor="email"
+            className="block text-gray-700 text-sm font-bold mb-2"
+          >
             Email Address
           </label>
           <input
@@ -43,7 +59,10 @@ const LoginPage: React.FC = () => {
           />
         </div>
         <div className="mb-6">
-          <label htmlFor="password" className="block text-gray-700 text-sm font-bold mb-2">
+          <label
+            htmlFor="password"
+            className="block text-gray-700 text-sm font-bold mb-2"
+          >
             Password
           </label>
           <input
@@ -62,7 +81,10 @@ const LoginPage: React.FC = () => {
           >
             Log In
           </button>
-          <Link to="/register" className="inline-block align-baseline font-semibold text-blue-500 hover:text-blue-800">
+          <Link
+            to="/register"
+            className="inline-block align-baseline font-semibold text-blue-500 hover:text-blue-800"
+          >
             Register
           </Link>
         </div>

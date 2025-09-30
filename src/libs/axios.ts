@@ -49,8 +49,8 @@ export const makeGetRequest = async <T>(url: string): Promise<T> => {
   return response.data as T;
 }
 
-export const makePostRequest = (url: string, data: any, isLoginRegRequest: boolean = false) => {
-  return apiClient.post(isLoginRegRequest ? `/${url}` : `/post-info?url=${encodeURIComponent(url)}`, data);
+export const makePostRequest =  async <T> (url: string, data: T) => {
+  return await apiClient.post(`/post-info?url=${encodeURIComponent(url)}`, data);
 }
 
 export const makePutRequest = (url: string, data: any) => {

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // Import useAuth
+import { useLocalAuth } from '../context/AuthContext'; // Import useAuth
 
 const RegisterPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { login } = useAuth(); // Get the login function
+  const { login } = useLocalAuth(); // Get the login function
   const navigate = useNavigate();
 
   const handleSubmit = (event: { preventDefault: () => void; }) => {

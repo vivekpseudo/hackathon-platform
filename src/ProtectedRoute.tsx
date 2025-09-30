@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
+import { useLocalAuth } from './context/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { isAuthenticated, userRole } = useAuth();
+  const { isAuthenticated, userRole } = useLocalAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
