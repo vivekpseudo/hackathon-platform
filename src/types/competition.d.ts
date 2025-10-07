@@ -1,32 +1,46 @@
-interface HtmlContent   {
-    type: "heading" | "paragraph" | "link" | "text";
-    level?: number;
-    url?: string;
-    bold?: boolean;
-    children: HtmlContent[];
-    text?: string;
-} 
+export interface CompetitionOrganiser {
+  name: string;
+}
 
-interface Competition {
+export interface CompetitionContact {
+  contactName: string;
+  email: string;
+  phonenumber: string;
+}
+
+export interface CompetitionReward {
+  title: string;
+  rewardDesc?: string;
+  position?: string;
+  isCash?: boolean;
+  amount?: number;
+}
+
+export interface CompetitionTimeline {
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface CompetitionFormInput {
   Title: string;
   startDate: string;
   endDate: string;
-  isActive: true;
-  isCompleted: false;
-  createdAt: string;
-  updatedAt:string;
-  publishedAt: string;
-  type: "Online" | "Offline";
+  isActive: boolean;
+  isCompleted: boolean;
+  type: string; // Online/Offline
   minMember: number;
   maxMember: number;
-  feeType: "Paid" | "Free";
+  feeType: string; // Paid/Free
   feePerMember: number;
   feePerTeam: number;
   isFeeForTeam: boolean;
-  description: Array<HtmlContent>;
 }
-
-// define detailed competition interface extending basic competition
+interface ObjectResponseType<T> {
+  id: number;
+  attributes: T;
+}
 interface CompetitionDetail extends Competition {
     competition_category: any; //TODO: define category type
     competition_contact: any; //TODO: contact type
@@ -34,9 +48,4 @@ interface CompetitionDetail extends Competition {
     competition_timelines: any; //TODO: timeline type
     competition_rewards: any; //TODO: reward type
     id: number
-}
-
-interface ObjectResponseType<T> {
-  id: number;
-  attributes: T;
 }

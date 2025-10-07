@@ -10,28 +10,43 @@ const hackathons = [
 
 const HackathonManagementPage: React.FC = () => {
   return (
-    <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Hackathon Management</h1>
+
       <div className="mb-4">
-        <Link to="/admin/hackathons/create" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+        <Link
+          to="/hackathons-management/create"
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        >
           Create New Hackathon
         </Link>
       </div>
+      
       {hackathons.length > 0 ? (
         <ul className="shadow-md rounded-md">
+          {/* Table headers */}
           <li className="bg-gray-100 py-2 px-4 font-semibold grid grid-cols-4">
             <span>Title</span>
             <span>Start Date</span>
             <span>End Date</span>
             <span>Actions</span>
           </li>
+
+          {/* Hackathon list */}
           {hackathons.map((hackathon) => (
-            <li key={hackathon.id} className="py-2 px-4 grid grid-cols-4 items-center border-b">
+            <li
+              key={hackathon.id}
+              className="py-2 px-4 grid grid-cols-4 items-center border-b"
+            >
               <span>{hackathon.title}</span>
               <span>{new Date(hackathon.startDate).toLocaleDateString()}</span>
               <span>{new Date(hackathon.endDate).toLocaleDateString()}</span>
+
               <div>
-                <Link to={`/admin/hackathons/${hackathon.id}/edit`} className="text-blue-500 hover:underline mr-2">
+                <Link
+                  to={`/hackathons/${hackathon.id}/edit`}
+                  className="text-blue-500 hover:underline mr-2"
+                >
                   Edit
                 </Link>
                 <button className="text-red-500 hover:underline">

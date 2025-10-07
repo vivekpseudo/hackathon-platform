@@ -1,108 +1,259 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import React, { useState } from "react";
+import { createCompetition } from "../api/competitions";
+import { CompetitionFormInput } from "../types/competition";
 
-// Placeholder function to simulate fetching a hackathon for editing
-const fetchHackathon = (id: unknown) => {
-  return hackathons.find((h) => h.id === parseInt(id as string));
-};
+const CreateHackathonForm: React.FC = () => {
+  const [formData, setFormData] = useState<CompetitionFormInput>({
+    Title: "",
+    startDate: "",
+    endDate: "",
+    isActive: true,
+    isCompleted: false,
+    type: "Online",
+    minMember: 1,
+    maxMember: 5,
+    feeType: "Free",
+    feePerMember: 0,
+    feePerTeam: 0,
+    isFeeForTeam: false,
+  });
 
-// Placeholder data (same as in HackathonManagementPage for now)
-const hackathons = [
-  { id: 1, title: 'AI Innovation Challenge', startDate: '2025-05-10T00:00', endDate: '2025-05-15T23:59' },
-  { id: 2, title: 'Web3 Development Hackathon', startDate: '2025-05-25T00:00', endDate: '2025-05-30T23:59' },
-  { id: 3, title: 'Sustainability Hack', startDate: '2025-06-05T00:00', endDate: '2025-06-10T23:59' },
-];
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-const HackathonFormPage: React.FC = () => {
-  const { id } = useParams<{ id?: string }>();
-  const navigate = useNavigate();
-  const isEditing = !!id;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const initialHackathon = isEditing ? fetchHackathon(id) : { title: '', startDate: '', endDate: '' };
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
 
-  const [title, setTitle] = useState(initialHackathon?.title || '');
-  const [startDate, setStartDate] = useState(initialHackathon?.startDate ? initialHackathon.startDate.slice(0, 16) : '');
-  const [endDate, setEndDate] = useState(initialHackathon?.endDate ? initialHackathon.endDate.slice(0, 16) : '');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage("");
 
-  useEffect(() => {
-    if (isEditing && !initialHackathon) {
-      // Redirect if trying to edit a non-existent hackathon (in placeholder data)
-      navigate('/admin/hackathons');
+    try {
+      console.log("Submitting competition data:", formData);
+      
+      const res = await createCompetition(formData);
+      console.log(" Competition created:", res);
+
+      setMessage("Hackathon created successfully!");
+      
+      // Reset form
+      setFormData({
+        Title: "",
+        startDate: "",
+        endDate: "",
+        isActive: true,
+        isCompleted: false,
+        type: "Online",
+        minMember: 1,
+        maxMember: 5,
+        feeType: "Free",
+        feePerMember: 0,
+        feePerTeam: 0,
+        isFeeForTeam: false,
+      });
+    } catch (error: any) {
+      console.error(" Error creating competition:", error);
+      console.error(" Response data:", error?.response?.data);
+      console.error("Response status:", error?.response?.status);
+      
+      if (error?.response?.status === 403) {
+        const errorMsg = error?.response?.data?.error?.message || "Access forbidden - check your permissions";
+        setMessage(` ${errorMsg}`);
+      } else if (error?.response?.status === 401) {
+        setMessage(" Unauthorized - Please login first");
+      } else {
+        const errorMsg = error?.response?.data?.error?.message || "Failed to create competition";
+        setMessage(` ${errorMsg}`);
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [isEditing, initialHackathon, navigate]);
-
-  const handleSubmit = (event: { preventDefault: () => void; }) => {
-    event.preventDefault();
-    const hackathonData = { title, startDate, endDate };
-    if (isEditing) {
-      // In a real app, you would send an update request to the backend
-      console.log('Hackathon updated:', id, hackathonData);
-      alert(`Hackathon with ID ${id} updated!`);
-    } else {
-      // In a real app, you would send a create request to the backend
-      console.log('New hackathon created:', hackathonData);
-      alert('New hackathon created!');
-    }
-    navigate('/admin/hackathons');
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">{isEditing ? 'Edit Hackathon' : 'Create New Hackathon'}</h1>
-      <form onSubmit={handleSubmit} className="max-w-md mx-auto bg-white shadow-md rounded-md p-6">
-        <div className="mb-4">
-          <label htmlFor="title" className="block text-gray-700 text-sm font-bold mb-2">
-            Title
-          </label>
+    <div className="max-w-2xl mx-auto bg-white p-8 shadow rounded-lg mt-10">
+      <h1 className="text-2xl font-semibold mb-6 text-center">
+        Create New Hackathon
+      </h1>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block font-medium">Title</label>
           <input
             type="text"
-            id="title"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            name="Title"
+            value={formData.Title}
+            onChange={handleChange}
+            className="w-full p-2 border rounded"
             required
           />
         </div>
-        <div className="mb-4">
-          <label htmlFor="startDate" className="block text-gray-700 text-sm font-bold mb-2">
-            Start Date and Time
-          </label>
-          <input
-            type="datetime-local"
-            id="startDate"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            required
-          />
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-medium">Start Date</label>
+            <input
+              type="datetime-local"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block font-medium">End Date</label>
+            <input
+              type="datetime-local"
+              name="endDate"
+              value={formData.endDate}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
         </div>
-        <div className="mb-4">
-          <label htmlFor="endDate" className="block text-gray-700 text-sm font-bold mb-2">
-            End Date and Time
-          </label>
-          <input
-            type="datetime-local"
-            id="endDate"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            required
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+
+        <div>
+          <label className="block font-medium">Type</label>
+          <select
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            className="w-full p-2 border rounded"
           >
-            {isEditing ? 'Save Changes' : 'Create Hackathon'}
-          </button>
-          <Link to="/admin/hackathons" className="inline-block align-baseline font-semibold text-blue-500 hover:text-blue-800">
-            Cancel
-          </Link>
+            <option value="Online">Online</option>
+            <option value="Offline">Offline</option>
+            <option value="Hybrid">Hybrid</option>
+          </select>
         </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-medium">Min Members</label>
+            <input
+              type="number"
+              name="minMember"
+              value={formData.minMember}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block font-medium">Max Members</label>
+            <input
+              type="number"
+              name="maxMember"
+              value={formData.maxMember}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block font-medium">Fee Type</label>
+          <select
+            name="feeType"
+            value={formData.feeType}
+            onChange={handleChange}
+            className="w-full p-2 border rounded"
+          >
+            <option value="Free">Free</option>
+            <option value="Paid">Paid</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-medium">Fee Per Member</label>
+            <input
+              type="number"
+              name="feePerMember"
+              value={formData.feePerMember}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block font-medium">Fee Per Team</label>
+            <input
+              type="number"
+              name="feePerTeam"
+              value={formData.feePerTeam}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 flex-wrap">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              name="isFeeForTeam"
+              checked={formData.isFeeForTeam}
+              onChange={handleChange}
+              className="mr-2"
+            />
+            Is Fee for Team?
+          </label>
+
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              name="isActive"
+              checked={formData.isActive}
+              onChange={handleChange}
+              className="mr-2"
+            />
+            Active
+          </label>
+
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              name="isCompleted"
+              checked={formData.isCompleted}
+              onChange={handleChange}
+              className="mr-2"
+            />
+            Completed
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          disabled={loading}
+        >
+          {loading ? "Creating..." : "Create Hackathon"}
+        </button>
       </form>
+
+      {message && (
+        <p
+          className={`mt-4 text-center ${
+            message.includes("Failed") || message.includes("🚫") || message.includes("❌")
+              ? "text-red-500"
+              : "text-green-600"
+          }`}
+        >
+          {message}
+        </p>
+      )}
     </div>
   );
 };
 
-export default HackathonFormPage;
+export default CreateHackathonForm;
