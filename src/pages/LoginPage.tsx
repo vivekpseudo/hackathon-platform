@@ -15,6 +15,7 @@ const LoginPage: React.FC = () => {
       { email, password },
       {
         onSuccess: (data) => {
+          console.log("Login successful:", data);
           if (data.user.role === "judge") navigate("/judge/dashboard");
           else if (data.user.isOrganizer) navigate("/hackathons-management");
           else navigate("/hackathons");

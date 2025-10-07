@@ -64,25 +64,16 @@ export const removeAuthToken = () => {
 };
 
 export const makeGetRequest = async <T>(url: string): Promise<T> => {
-  // Auth endpoints go direct, others through proxy
-  if (url.startsWith('auth/')) {
-    const response = await apiClient.get(`/${url}`);
-    return response.data as T;
-  }
-  const response = await apiClient.get(`/get-info?url=${encodeURIComponent(url)}`);
+  const response = await apiClient.get(url);
   return response.data as T;
 };
 
 export const makePostRequest = async <T>(url: string, data: T) => {
-  // Auth endpoints go direct, others through proxy
-  if (url.startsWith('auth/')) {
-    return await apiClient.post(`/${url}`, data);
-  }
-  return await apiClient.post(`/post-info?url=${encodeURIComponent(url)}`, data);
+  return await apiClient.post(url, data);
 };
 
 export const makePutRequest = (url: string, data: any) => {
-  return apiClient.put(`/update-info?url=${encodeURIComponent(url)}`, data);
+  return apiClient.put(url, data);
 };
 
 export default apiClient;
