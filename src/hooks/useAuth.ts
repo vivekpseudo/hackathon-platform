@@ -1,17 +1,44 @@
 import { useMutation } from "@tanstack/react-query";
-import { login } from "../api/auth";
-import { setUser, setUserRole, setAuthToken } from "../libs/storageHelper";
+import { login as loginApi } from "../api/auth";
+import { setUser, setUserRole, setAuthToken as setStorageAuthToken } from "../libs/storageHelper";
+import { setAuthToken as setAxiosAuthToken } from "../libs/axios";
+import { useLocalAuth } from "../context/AuthContext";
 
 const useAuth = () => {
+  const { login: contextLogin } = useLocalAuth();
+  
   return useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
-      login(email, password),
+      loginApi(email, password),
     onSuccess: (data) => {
-      // Store the token in localStorage or sessionStorage
-      setAuthToken(data.jwt);
+      console.log(" Login API successful:", data);
+      
+      // Extract role (handle both string and object)
+      const role = typeof data.user.role === 'string' 
+        ? data.user.role 
+        : data.user.role?.name || 'user';
+      
+      // Store in localStorage
+      setStorageAuthToken(data.jwt);
       setUser(data.user);
-      setUserRole(data.role);
+      setUserRole(role);
+      
+      // Set in axios headers
+      setAxiosAuthToken(data.jwt);
+      
+      // Update context
+      contextLogin(data.user, data.jwt, role);
+      
+      console.log("Auth data stored and context updated");
     },
+    onError: (error: any) => {
+      console.error(" Login failed:", error);
+      console.error("Error details:", {
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message
+      });
+    }
   });
 };
 

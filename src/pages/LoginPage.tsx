@@ -5,24 +5,40 @@ import useAuth from "../hooks/useAuth";
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const authMutation = useAuth(); 
+  const [error, setError] = useState("");
+  const authMutation = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
+    console.log("Attempting login with:", { email });
 
     authMutation.mutate(
       { email, password },
       {
         onSuccess: (data) => {
-          console.log("Login successful:", data);
-          if (data.user.role === "judge") navigate("/judge/dashboard");
-          else if (data.user.isOrganizer) navigate("/hackathons-management");
-          else navigate("/hackathons");
+          console.log("Login successful, user:", data.user);
+          
+          // Navigate based on role
+          if (data.user.role === "judge" || data.user.role?.name === "judge") {
+            navigate("/judge/dashboard", { replace: true });
+          } else if (data.user.isOrganizer) {
+            navigate("/hackathons-management", { replace: true });
+          } else {
+            navigate("/hackathons", { replace: true });
+          }
         },
-        onError: (err) => {
-          console.error("Login failed:", err);
-          alert("Login failed. Please check your credentials.");
+        onError: (err: any) => {
+          console.error(" Login failed:", err);
+          
+          const errorMessage = 
+            err?.response?.data?.error?.message || 
+            err?.response?.data?.message ||
+            "Invalid email or password. Please try again.";
+          
+          setError(errorMessage);
         },
       }
     );
@@ -35,6 +51,12 @@ const LoginPage: React.FC = () => {
         onSubmit={handleSubmit}
         className="max-w-md mx-auto bg-white shadow-md rounded-md p-6"
       >
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+
         <div className="mb-4">
           <label htmlFor="email" className="block text-gray-700 text-sm font-bold mb-2">
             Email Address
@@ -66,14 +88,14 @@ const LoginPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <button
             type="submit"
-            disabled={authMutation.isLoading} 
+            disabled={authMutation.isPending}
             className={`font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
-              authMutation.isLoading
+              authMutation.isPending
                 ? "bg-gray-400 cursor-not-allowed text-white"
                 : "bg-blue-500 hover:bg-blue-700 text-white"
             }`}
           >
-            {authMutation.isLoading ? "Logging in..." : "Log In"}
+            {authMutation.isPending ? "Logging in..." : "Log In"}
           </button>
 
           <Link

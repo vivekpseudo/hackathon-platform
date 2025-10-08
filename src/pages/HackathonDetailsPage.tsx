@@ -1,6 +1,12 @@
 import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useGetCompetition } from "../hooks/useCompetitions";
+import {
+  VerticalTimeline,
+  VerticalTimelineElement,
+} from "react-vertical-timeline-component";
+import "react-vertical-timeline-component/style.min.css";
+
 
 const HackathonDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -68,37 +74,59 @@ const HackathonDetailsPage: React.FC = () => {
 
       {/* Timeline */}
       {hackathon?.competition_timelines?.data?.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Timeline</h2>
-          <div className="relative border-l-2 border-blue-500 pl-6">
-            {hackathon.competition_timelines.data.map((item: any) => (
-              <div key={item.id} className="mb-6 relative">
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {item.attributes?.title || "No title"}
-                </h3>
-                {item.attributes?.description && (
-                  <p className="text-gray-600 mb-1">{item.attributes.description}</p>
-                )}
-                <div className="text-sm text-gray-500">
-                  <p>
-                    Start:{" "}
-                    {item.attributes?.startDate
-                      ? new Date(item.attributes.startDate).toLocaleDateString("en-US")
-                      : "TBA"}
-                  </p>
-                  <p>
-                    End:{" "}
-                    {item.attributes?.endDate
-                      ? new Date(item.attributes.endDate).toLocaleDateString("en-US")
-                      : "TBA"}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">Timeline</h2>
+          <VerticalTimeline layout="1-column" lineColor="#3b82f6">
+            {hackathon.competition_timelines.data.map((item: any, index: number) => {
+              const { title, description, startDate, endDate } = item.attributes || {};
+              const circleColor =
+                index === hackathon.competition_timelines.data.length - 1 ? "#16cc52" : "#3b82f6";
+
+              return (
+                <VerticalTimelineElement
+                  key={item.id}
+                  date={`${startDate ? new Date(startDate).toLocaleDateString() : "TBA"} - ${
+                    endDate ? new Date(endDate).toLocaleDateString() : "TBA"
+                  }`}
+                  icon={
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        width: "100%",
+                        height: "100%",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      {index + 1}
+                    </div>
+                  }
+                  iconStyle={{
+                    backgroundColor: circleColor,
+                    color: "#fff",
+                    border: "2px solid #fff",
+                  }}
+                  contentStyle={{
+                    background: "#f9f9f9",
+                    color: "#333",
+                    padding: "6px 10px",
+                    fontSize: "0.8rem",
+                  }}
+                  contentArrowStyle={{
+                    borderRight: "5px solid #f9f9f9",
+                  }}
+                >
+                  {title && <h3 style={{ fontSize: "0.85rem", margin: "0" }}>{title}</h3>}
+                  {description && <p style={{ fontSize: "0.75rem", margin: "2px 0 0 0" }}>{description}</p>}
+                </VerticalTimelineElement>
+              );
+            })}
+          </VerticalTimeline>
         </div>
       )}
-
       {/* Rewards */}
       {hackathon?.competition_rewards?.data?.length > 0 && (
         <div className="mb-6">
