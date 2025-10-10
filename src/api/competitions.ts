@@ -7,7 +7,6 @@ import {
   ObjectResponseType,
 } from "../types/competition";
 
-// Add this type if it doesn't exist in your types file
 type ApiResponseType<T> = {
   data: T;
   meta?: any;
@@ -49,25 +48,131 @@ export const getCompetitionById = async (
   }
 };
 
-
 export const createCompetition = async (
   formData: CompetitionFormInput
 ): Promise<ApiResponseType<ObjectResponseType<CompetitionDetail>>> => {
   try {
-    console.log("Creating competition with data:", formData);
+    console.log("🚀 Creating competition with form data:", formData);
     
+    // Step 1: Create components first (organiser, contact)
+    // These need to be created separately and then linked by ID
     
-    const payload = { data: formData };
-    console.log("Payload being sent:", payload);
+    // Create CompetitionOrganiser
+    let organiserId = null;
+    if (formData.competition_organiser?.name) {
+      try {
+        const organiserResponse = await makePostRequest("competition-organisers", {
+          data: formData.competition_organiser
+        });
+        organiserId = organiserResponse.data.data.id;
+        console.log("✅ Organiser created with ID:", organiserId);
+      } catch (err: any) {
+        console.error("❌ Failed to create organiser:", err?.response?.data || err);
+      }
+    }
+
+    // Create CompetitionContact
+    let contactId = null;
+    if (formData.competition_contact?.email) {
+      try {
+        const contactResponse = await makePostRequest("competition-contacts", {
+          data: formData.competition_contact
+        });
+        contactId = contactResponse.data.data.id;
+        console.log("✅ Contact created with ID:", contactId);
+      } catch (err: any) {
+        console.error("❌ Failed to create contact:", err?.response?.data || err);
+      }
+    }
+
+    // Create CompetitionRewards
+    const rewardIds: number[] = [];
+    for (const reward of formData.competition_rewards) {
+      if (reward.title) {
+        try {
+          const rewardResponse = await makePostRequest("competition-rewards", {
+            data: {
+              title: reward.title,
+              description: reward.description || "",
+              amount: reward.amount?.toString() || "0",
+              isCash: reward.isCash ?? false,
+              position: reward.position?.toString() || "1",
+            }
+          });
+          rewardIds.push(rewardResponse.data.data.id);
+          console.log("✅ Reward created with ID:", rewardResponse.data.data.id);
+        } catch (err: any) {
+          console.error("❌ Failed to create reward:", err?.response?.data || err);
+        }
+      }
+    }
+
+    // Create CompetitionTimelines
+    const timelineIds: number[] = [];
+    for (const timeline of formData.competition_timelines) {
+      if (timeline.title && timeline.startDate && timeline.endDate) {
+        try {
+          const timelineResponse = await makePostRequest("competition-timelines", {
+            data: {
+              title: timeline.title,
+              description: timeline.description || "",
+              startDate: timeline.startDate,
+              endDate: timeline.endDate,
+              type: timeline.type || "Online",
+            }
+          });
+          timelineIds.push(timelineResponse.data.data.id);
+          console.log("✅ Timeline created with ID:", timelineResponse.data.data.id);
+        } catch (err: any) {
+          console.error("❌ Failed to create timeline:", err?.response?.data || err);
+        }
+      }
+    }
+
+    // Step 2: Create the main competition with all the IDs
+    const payload = {
+      data: {
+        Title: formData.Title,
+        description: formData.description || "<p></p>",
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        isActive: formData.isActive ?? true,
+        isCompleted: formData.isCompleted ?? false,
+        type: formData.type || "Online",
+        minMember: formData.minMember || 1,
+        maxMember: formData.maxMember || 5,
+        feeType: formData.feeType || "Free",
+        feePerMember: formData.feePerMember || 0,
+        feePerTeam: formData.feePerTeam || 0,
+        isFeeForTeam: formData.isFeeForTeam ?? false,
+        
+        // Relations - pass IDs only
+        competition_category: formData.competition_category?.[0] || null,
+        competition_organiser: organiserId,
+        competition_contact: contactId,
+        competition_rewards: rewardIds.length > 0 ? rewardIds : null,
+        competition_timelines: timelineIds.length > 0 ? timelineIds : null,
+        competition_result: formData.competition_result || null,
+        helpDocs: formData.helpDocs?.length > 0 ? formData.helpDocs : null,
+      }
+    };
+    
+    console.log("Final competition payload:", JSON.stringify(payload, null, 2));
     
     const response = await makePostRequest("competitions", payload);
 
-    console.log(" Competition created successfully:", response);
+    console.log("Competition created successfully:", response);
     return response as ApiResponseType<ObjectResponseType<CompetitionDetail>>;
+    
   } catch (error: any) {
-    console.error(" Error creating competition:", error);
+    console.error("Error creating competition:", error);
     console.error("Error response:", error?.response?.data);
     console.error("Error status:", error?.response?.status);
+    
+    if (error?.response?.data?.error?.details) {
+      console.error("🔍 Detailed errors:", error.response.data.error.details);
+    }
+    
     throw error;
   }
 };

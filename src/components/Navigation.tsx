@@ -35,7 +35,7 @@ const Navigation: React.FC = () => {
         {/* Logo */}
         <Link to="/" className="text-xl font-bold text-blue-500 grid grid-flow-col gap-2">
           <span className="sr-only">InnoThon</span>
-          <img className="h-12 w-auto bg-orange-100 rounded" src="logo.png" alt="logo" />
+          <img className="h-12 w-auto bg-orange-100 rounded" src="/logo.png" alt="logo" />
           <div className="text-3xl content-center">InnoThon</div>
         </Link>
 

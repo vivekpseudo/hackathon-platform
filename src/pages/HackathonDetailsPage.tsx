@@ -74,57 +74,59 @@ const HackathonDetailsPage: React.FC = () => {
 
       {/* Timeline */}
       {hackathon?.competition_timelines?.data?.length > 0 && (
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">Timeline</h2>
-          <VerticalTimeline layout="1-column" lineColor="#3b82f6">
-            {hackathon.competition_timelines.data.map((item: any, index: number) => {
-              const { title, description, startDate, endDate } = item.attributes || {};
-              const circleColor =
-                index === hackathon.competition_timelines.data.length - 1 ? "#16cc52" : "#3b82f6";
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Timeline</h2>
+          <div className="relative left-[-35px]"> {/* 👈 shifts the entire timeline left */}
+            <VerticalTimeline
+              layout="1-column"
+              lineColor="#3b82f6"
+              className="!ml-0"
+            >
+              {hackathon.competition_timelines.data.map((item: any, index: number) => {
+                const { title, description, startDate, endDate } = item.attributes || {};
+                const circleColor =
+                  index === hackathon.competition_timelines.data.length - 1
+                    ? "#16cc52"
+                    : "#3b82f6";
 
-              return (
-                <VerticalTimelineElement
-                  key={item.id}
-                  date={`${startDate ? new Date(startDate).toLocaleDateString() : "TBA"} - ${
-                    endDate ? new Date(endDate).toLocaleDateString() : "TBA"
-                  }`}
-                  icon={
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        width: "100%",
-                        height: "100%",
-                        color: "#fff",
-                        fontWeight: "bold",
-                        fontSize: "0.9rem",
-                      }}
-                    >
-                      {index + 1}
-                    </div>
-                  }
-                  iconStyle={{
-                    backgroundColor: circleColor,
-                    color: "#fff",
-                    border: "2px solid #fff",
-                  }}
-                  contentStyle={{
-                    background: "#f9f9f9",
-                    color: "#333",
-                    padding: "6px 10px",
-                    fontSize: "0.8rem",
-                  }}
-                  contentArrowStyle={{
-                    borderRight: "5px solid #f9f9f9",
-                  }}
-                >
-                  {title && <h3 style={{ fontSize: "0.85rem", margin: "0" }}>{title}</h3>}
-                  {description && <p style={{ fontSize: "0.75rem", margin: "2px 0 0 0" }}>{description}</p>}
-                </VerticalTimelineElement>
-              );
-            })}
-          </VerticalTimeline>
+                return (
+                  <VerticalTimelineElement
+                    key={item.id}
+                    date={`${startDate ? new Date(startDate).toLocaleDateString() : "TBA"} - ${endDate ? new Date(endDate).toLocaleDateString() : "TBA"
+                      }`}
+                    icon={
+                      <div className="flex items-center justify-center w-full h-full font-semibold text-white">
+                        {index + 1}
+                      </div>
+                    }
+                    iconStyle={{
+                      backgroundColor: circleColor,
+                      color: "#fff",
+                      border: "2px solid #fff",
+                    }}
+                    contentStyle={{
+                      background: "#f9f9f9",
+                      color: "#333",
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                    }}
+                    contentArrowStyle={{
+                      borderRight: "5px solid #f9f9f9",
+                    }}
+                  >
+                    {title && (
+                      <h3 className="text-base font-semibold text-gray-800 mb-1">
+                        {title}
+                      </h3>
+                    )}
+                    {description && (
+                      <p className="text-sm text-gray-600">{description}</p>
+                    )}
+                  </VerticalTimelineElement>
+                );
+              })}
+            </VerticalTimeline>
+          </div>
         </div>
       )}
       {/* Rewards */}
@@ -173,12 +175,6 @@ const HackathonDetailsPage: React.FC = () => {
 
       <div className="flex gap-4 mt-6">
         <button
-          onClick={handleRegisterClick}
-          className="bg-blue-600 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded"
-        >
-          Register
-        </button>
-        <button
           onClick={handleJoinClick}
           className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
         >
@@ -196,7 +192,6 @@ const HackathonDetailsPage: React.FC = () => {
 };
 
 export default HackathonDetailsPage;
-
 
 
 
