@@ -1,6 +1,5 @@
 import React from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
+import { EditorContent, type Editor } from "@tiptap/react";
 import { 
   Bold, 
   Italic, 
@@ -20,7 +19,7 @@ interface Props {
     editor: Editor | null;
 }
 
-const MenuBar = ({ editor }: { editor: Editor }) => {
+const MenuBar = ({ editor }: { editor: Editor | null }) => {
   if (!editor) {
     return null;
   }

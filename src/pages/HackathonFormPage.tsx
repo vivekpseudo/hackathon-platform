@@ -3,6 +3,8 @@ import { createCompetition } from "../api/competitions";
 import { CompetitionFormInput } from "../types/competition";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // Step Components
 import DescriptionStep from "../components/Hackathonsteps/DescriptionStep";
@@ -19,11 +21,12 @@ const CreateHackathonForm: React.FC = () => {
   const totalSteps = steps.length;
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const submittingRef = React.useRef(false); // Track submission state
+  const [createdCompetition, setCreatedCompetition] = useState<any>(null);
+  const submittingRef = React.useRef(false);
 
   const [formData, setFormData] = useState<CompetitionFormInput>({
     Title: "",
-    description: "<p></p>",
+    description: "",
     startDate: "",
     endDate: "",
     isActive: true,
@@ -35,7 +38,7 @@ const CreateHackathonForm: React.FC = () => {
     feePerMember: 0,
     feePerTeam: 0,
     isFeeForTeam: false,
-    competition_category: [1],
+    competition_category: [""],
     competition_contact: { contactName: "", email: "", phonenumber: "" },
     competition_organiser: {
       name: "",
@@ -106,7 +109,7 @@ const CreateHackathonForm: React.FC = () => {
   const resetForm = () => {
     setFormData({
       Title: "",
-      description: "<p></p>",
+      description: "",
       startDate: "",
       endDate: "",
       isActive: true,
@@ -118,7 +121,7 @@ const CreateHackathonForm: React.FC = () => {
       feePerMember: 0,
       feePerTeam: 0,
       isFeeForTeam: false,
-      competition_category: [1],
+      competition_category: [""],
       competition_contact: { contactName: "", email: "", phonenumber: "" },
       competition_organiser: {
         name: "",
@@ -139,12 +142,11 @@ const CreateHackathonForm: React.FC = () => {
       competition_result: "",
       helpDocs: [],
     });
-    
-    if (editor) {
-      editor.commands.setContent("<p></p>");
-    }
-    
+
+    if (editor) editor.commands.setContent("");
+
     setMessage("");
+    setCreatedCompetition(null);
     setStep(1);
     submittingRef.current = false;
   };
@@ -152,14 +154,13 @@ const CreateHackathonForm: React.FC = () => {
   // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation(); // Prevent event bubbling
-    
-    // Prevent double submission
+    e.stopPropagation();
+
     if (loading || submittingRef.current) {
       console.log("⏳ Already submitting, ignoring duplicate submission");
       return;
     }
-    
+
     submittingRef.current = true;
     setLoading(true);
     setMessage("");
@@ -167,7 +168,7 @@ const CreateHackathonForm: React.FC = () => {
     try {
       console.log("📝 Starting hackathon creation process...");
       console.log("🔢 Submission attempt at:", new Date().toISOString());
-      
+
       // Validate required fields
       if (!formData.Title?.trim()) {
         setMessage("❌ Title is required");
@@ -175,7 +176,7 @@ const CreateHackathonForm: React.FC = () => {
         submittingRef.current = false;
         return;
       }
-      
+
       if (!formData.startDate || !formData.endDate) {
         setMessage("❌ Start Date and End Date are required");
         setLoading(false);
@@ -183,11 +184,10 @@ const CreateHackathonForm: React.FC = () => {
         return;
       }
 
-      // Validate at least one timeline
       const hasValidTimeline = formData.competition_timelines.some(
-        t => t.title && t.startDate && t.endDate
+        (t) => t.title && t.startDate && t.endDate
       );
-      
+
       if (!hasValidTimeline) {
         setMessage("❌ At least one valid timeline is required");
         setLoading(false);
@@ -195,26 +195,39 @@ const CreateHackathonForm: React.FC = () => {
         return;
       }
 
+      // Show Toastify message before publishing
+      toast.info("🚀 This competition will be published for everyone", {
+        position: "top-center",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+
       console.log("✅ Validation passed, creating competition...");
       console.log("📦 Form data:", formData);
-      
-      await createCompetition(formData);
-      
-      setMessage("✅ Hackathon created successfully!");
-      submittingRef.current = false; // Reset flag after success
-      
-      // Stay on review page, let user decide what to do next
-      console.log("✅ Hackathon creation complete! Staying on review page.");
-      
+
+      const response = await createCompetition(formData);
+
+      console.log("Backend response:", response);
+      console.log("Response data:", response.data);
+
+      // Store the entire response for ReviewStep
+      setCreatedCompetition(response.data);
+
+      setMessage("✅ Hackathon published successfully!");
+      submittingRef.current = false;
+      console.log("✅ Hackathon creation complete!");
     } catch (error: any) {
       console.error("❌ Error creating hackathon:", error);
-      
       const status = error?.response?.status;
       const errorMsg = error?.response?.data?.error?.message;
       const errorDetails = error?.response?.data?.error?.details;
-      
+
       let userMessage = "";
-      
+
       if (status === 403) {
         userMessage = "Access forbidden. You may not have permission to create hackathons.";
       } else if (status === 401) {
@@ -223,8 +236,8 @@ const CreateHackathonForm: React.FC = () => {
         if (errorDetails?.errors) {
           const errors = errorDetails.errors
             .map((err: any) => {
-              const path = err.path?.join('.') || 'unknown';
-              const message = err.message || 'validation error';
+              const path = err.path?.join(".") || "unknown";
+              const message = err.message || "validation error";
               return `${path}: ${message}`;
             })
             .join(", ");
@@ -235,23 +248,14 @@ const CreateHackathonForm: React.FC = () => {
           userMessage = "Invalid data. Please check all fields.";
         }
       } else {
-        userMessage = errorMsg || "Failed to create hackathon. Please try again.";
+        userMessage = errorMsg || "Failed to publish hackathon. Please try again.";
       }
-      
+
       setMessage(`❌ ${userMessage}`);
-      
-      // Log detailed error for debugging
-      console.error("🔍 Full error details:", {
-        status,
-        message: errorMsg,
-        details: errorDetails,
-        fullError: error?.response?.data
-      });
-      
+      console.error("🔍 Full error details:", { status, message: errorMsg, details: errorDetails });
       submittingRef.current = false;
     } finally {
       setLoading(false);
-      // Keep submittingRef false set in the success/error blocks
     }
   };
 
@@ -278,7 +282,9 @@ const CreateHackathonForm: React.FC = () => {
               </div>
               <span className="text-xs mt-1">{title}</span>
             </div>
-            {current !== totalSteps && <div className={`flex-1 h-1 ${current < step ? "bg-blue-500" : "bg-gray-300"}`} />}
+            {current !== totalSteps && (
+              <div className={`flex-1 h-1 ${current < step ? "bg-blue-500" : "bg-gray-300"}`} />
+            )}
           </React.Fragment>
         );
       })}
@@ -337,7 +343,7 @@ const CreateHackathonForm: React.FC = () => {
               Back
             </button>
           )}
-          
+
           {step < totalSteps ? (
             <button
               type="button"
@@ -354,7 +360,7 @@ const CreateHackathonForm: React.FC = () => {
                   disabled={loading}
                   className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400 disabled:cursor-not-allowed ml-auto"
                 >
-                  {loading ? "Creating..." : "Submit"}
+                  {loading ? "Publishing..." : "Publish"}
                 </button>
               ) : (
                 <div className="flex gap-4 ml-auto">
@@ -367,7 +373,7 @@ const CreateHackathonForm: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => window.location.href = "/hackathons-management"}
+                    onClick={() => (window.location.href = "/hackathons-management")}
                     className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
                   >
                     View All Hackathons
@@ -380,14 +386,18 @@ const CreateHackathonForm: React.FC = () => {
       </form>
 
       {message && (
-        <div className={`mt-4 p-4 rounded-lg text-center ${
-          message.startsWith("❌") 
-            ? "bg-red-100 border border-red-400 text-red-700" 
-            : "bg-green-100 border border-green-400 text-green-700"
-        }`}>
+        <div
+          className={`mt-4 p-4 rounded-lg text-center ${
+            message.startsWith("❌")
+              ? "bg-red-100 border border-red-400 text-red-700"
+              : "bg-green-100 border border-green-400 text-green-700"
+          }`}
+        >
           {message}
         </div>
       )}
+
+      <ToastContainer />
     </div>
   );
 };

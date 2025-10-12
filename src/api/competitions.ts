@@ -54,6 +54,9 @@ export const createCompetition = async (
   try {
     console.log("🚀 Creating competition with form data:", formData);
     
+    // DEBUG: Log raw description
+    console.log("DEBUG - Raw formData.description:", formData.description);
+    
     // Step 1: Create components first (organiser, contact)
     // These need to be created separately and then linked by ID
     
@@ -129,11 +132,39 @@ export const createCompetition = async (
       }
     }
 
-    // Step 2: Create the main competition with all the IDs
-    const payload = {
+    // Step 2: Strip HTML and prepare description for Strapi v4 Rich Text format
+    const plainTextDescription = formData.description
+      ?.replace(/<[^>]*>/g, '') // Remove HTML tags
+      ?.trim() || ""; // Trim whitespace
+
+    // DEBUG: Log all description steps
+    console.log("DEBUG - After stripping HTML:", plainTextDescription);
+    console.log("DEBUG - Description type:", typeof plainTextDescription);
+    console.log("DEBUG - Description length:", plainTextDescription.length);
+    console.log("DEBUG - Description is empty?:", plainTextDescription === "");
+
+    // Convert plain text to Strapi v4 Rich Text format
+    const descriptionJSON = plainTextDescription ? {
+      blocks: [
+        {
+          key: "key1",
+          text: plainTextDescription,
+          type: "paragraph",
+          depth: 0,
+          inlineStyleRanges: [],
+          entityRanges: [],
+          data: {}
+        }
+      ],
+      entityMap: {}
+    } : null;
+
+    console.log("DEBUG - Description JSON:", JSON.stringify(descriptionJSON, null, 2));
+
+    // Step 3: Create the main competition with all the IDs
+    const payload: any = {
       data: {
         Title: formData.Title,
-        description: formData.description || "<p></p>",
         startDate: formData.startDate,
         endDate: formData.endDate,
         isActive: formData.isActive ?? true,
@@ -145,8 +176,6 @@ export const createCompetition = async (
         feePerMember: formData.feePerMember || 0,
         feePerTeam: formData.feePerTeam || 0,
         isFeeForTeam: formData.isFeeForTeam ?? false,
-        
-        // Relations - pass IDs only
         competition_category: formData.competition_category?.[0] || null,
         competition_organiser: organiserId,
         competition_contact: contactId,
@@ -156,6 +185,14 @@ export const createCompetition = async (
         helpDocs: formData.helpDocs?.length > 0 ? formData.helpDocs : null,
       }
     };
+
+    // Add description in Strapi v4 JSON Rich Text format if it has content
+    if (descriptionJSON) {
+      payload.data.description = descriptionJSON;
+      console.log("✅ Description added to payload in Strapi v4 format");
+    } else {
+      console.warn("⚠️ Description is empty, not adding to payload");
+    }
     
     console.log("Final competition payload:", JSON.stringify(payload, null, 2));
     
@@ -170,7 +207,7 @@ export const createCompetition = async (
     console.error("Error status:", error?.response?.status);
     
     if (error?.response?.data?.error?.details) {
-      console.error("🔍 Detailed errors:", error.response.data.error.details);
+      console.error("Detailed errors:", error.response.data.error.details);
     }
     
     throw error;
