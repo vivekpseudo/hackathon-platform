@@ -213,3 +213,21 @@ export const createCompetition = async (
     throw error;
   }
 };
+export const getAllCompetitions = async (
+  pageNumber: number = 0,
+  pageSize: number = 100
+): Promise<ApiResponseType<ObjectResponseType<Competition>[]>> => {
+  const params = qs.stringify({
+    sort: ["startDate:desc"],
+    pagination: { page: pageNumber, pageSize: pageSize, withCount: true },
+    // NO filters - gets everything
+  });
+  try {
+    const response = await makeGetRequest(`competitions?${params}`);
+    console.log("All competitions fetched:", response);
+    return response as ApiResponseType<Array<ObjectResponseType<Competition>>>;
+  } catch (error) {
+    console.error("Error fetching all competitions:", error);
+    throw error;
+  }
+};
