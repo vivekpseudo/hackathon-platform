@@ -1,6 +1,7 @@
 import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useGetCompetition } from "../hooks/useCompetitions";
+import { useLocalAuth } from "../context/AuthContext"; 
 import {
   VerticalTimeline,
   VerticalTimelineElement,
@@ -9,12 +10,14 @@ import "react-vertical-timeline-component/style.min.css";
 
 
 const HackathonDetailsPage: React.FC = () => {
+  
   const { id } = useParams<{ id: string }>();
   const numericId = Number(id);
   const navigate = useNavigate();
-
+  const { isAuthenticated } = useLocalAuth();
   const { data, isLoading, isError, error } = useGetCompetition(numericId);
 
+  // NOW you can use conditional returns
   if (isLoading) return <p>Loading hackathon details...</p>;
   if (isError) return <p>Error fetching hackathon: {error?.message || "Unknown error"}</p>;
   if (!data) return <p>No hackathon found with this ID.</p>;
@@ -22,22 +25,11 @@ const HackathonDetailsPage: React.FC = () => {
   // unwrap Strapi-style response
   const hackathon = data?.data?.attributes || data?.attributes || data;
 
-  // check login helper
-  const isLoggedIn = !!localStorage.getItem("authToken");
-
-  const handleRegisterClick = () => {
-    if (!isLoggedIn) {
+  const handleJoinClick = () => {
+    if (!isAuthenticated) {
       navigate("/Register");
     } else {
-      console.log("User registering for hackathon:", hackathon?.Title);
-    }
-  };
-
-  const handleJoinClick = () => {
-    if (!isLoggedIn) {
-      navigate("/login");
-    } else {
-      console.log("User joining hackathon:", hackathon?.Title);
+      navigate(`/hackathon/${numericId}/join`);
     }
   };
 
@@ -76,7 +68,7 @@ const HackathonDetailsPage: React.FC = () => {
       {hackathon?.competition_timelines?.data?.length > 0 && (
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Timeline</h2>
-          <div className="relative left-[-35px]"> {/* 👈 shifts the entire timeline left */}
+          <div className="relative left-[-35px]">
             <VerticalTimeline
               layout="1-column"
               lineColor="#3b82f6"
@@ -129,6 +121,7 @@ const HackathonDetailsPage: React.FC = () => {
           </div>
         </div>
       )}
+
       {/* Rewards */}
       {hackathon?.competition_rewards?.data?.length > 0 && (
         <div className="mb-6">
@@ -171,7 +164,6 @@ const HackathonDetailsPage: React.FC = () => {
           )}
         </div>
       )}
-
 
       <div className="flex gap-4 mt-6">
         <button

@@ -18,6 +18,7 @@ import ProtectedRoute from "./ProtectedRoute";
 
 import "./App.css";
 import EditHackathonForm from "./pages/EditHackathonPage";
+import HackathonJoinPage from "./pages/HackathonJoinPage";
 
 function App() {
   const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/hackathons-management" element={<HackathonManagementPage />} />
                <Route path="/hackathons-management/:id/edit" element={<EditHackathonForm />} />
+               <Route path="/hackathon/:id/join" element={<HackathonJoinPage />} />
               {/* Protected routes */}
               <Route
                 path="/teams"
