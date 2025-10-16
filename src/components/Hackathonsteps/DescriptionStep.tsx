@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { EditorContent, type Editor } from "@tiptap/react";
 import { 
   Bold, 
@@ -10,7 +10,9 @@ import {
   Undo,
   Redo,
   Code,
-  Quote
+  Quote,
+  X,
+  Upload
 } from "lucide-react";
 
 interface Props {
@@ -139,7 +141,69 @@ const DescriptionStep: React.FC<Props> = ({
     setFormData,
     editor,
 }) => {
-    if (!editor) return null;
+    const [helpDocFiles, setHelpDocFiles] = useState<File[]>([]);
+    const [helpDocUploading, setHelpDocUploading] = useState(false);
+
+    // Sync editor content with formData.description
+    useEffect(() => {
+        if (!editor) return;
+
+        const updateDescription = () => {
+            const json = editor.getJSON();
+            
+            setFormData((prev: any) => ({
+                ...prev,
+                description: json
+            }));
+            
+            console.log("📝 Description updated:", json);
+        };
+
+        editor.on('update', updateDescription);
+
+        return () => {
+            editor.off('update', updateDescription);
+        };
+    }, [editor, setFormData]);
+
+    // Load existing description into editor
+    useEffect(() => {
+        if (!editor || !formData.description) return;
+
+        const currentContent = editor.getJSON();
+        const hasContent = currentContent.content && currentContent.content.length > 0;
+        
+        if (!hasContent && formData.description.content) {
+            editor.commands.setContent(formData.description);
+            console.log("📄 Loaded existing description into editor");
+        }
+    }, [editor, formData.description]);
+
+    const handleHelpDocFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files) {
+            const newFiles = Array.from(files);
+            setHelpDocFiles(prev => [...prev, ...newFiles]);
+        }
+        // Reset input
+        e.target.value = '';
+    };
+
+    const removeHelpDocFile = (index: number) => {
+        setHelpDocFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Update formData when helpDocFiles change
+    useEffect(() => {
+        setFormData((prev: any) => ({
+            ...prev,
+            helpDocs: helpDocFiles.length > 0 ? helpDocFiles : null
+        }));
+    }, [helpDocFiles, setFormData]);
+
+    if (!editor) {
+        return <div className="text-gray-500">Loading editor...</div>;
+    }
 
     return (
         <div className="flex flex-col gap-4">
@@ -266,26 +330,6 @@ const DescriptionStep: React.FC<Props> = ({
                     <option value={3}>Workshop</option>
                     <option value={4}>Competition</option>
                 </select>
-            </div>
-
-            {/* Organiser */}
-            <div className="flex flex-col gap-2">
-                <label className="font-semibold">Organiser Name</label>
-                <input
-                    type="text"
-                    value={formData.competition_organiser?.name || ""}
-                    onChange={(e) =>
-                        setFormData((prev: any) => ({
-                            ...prev,
-                            competition_organiser: {
-                                ...prev.competition_organiser,
-                                name: e.target.value,
-                            },
-                        }))
-                    }
-                    className="w-full p-2 border rounded"
-                    placeholder="Enter organiser name"
-                />
             </div>
 
             {/* Type */}
@@ -421,15 +465,84 @@ const DescriptionStep: React.FC<Props> = ({
                 </div>
             )}
 
-            {/* Description with TipTap MenuBar */}
+            {/* Description with TipTap */}
             <div className="flex flex-col gap-2 mt-4">
-                <label className="font-semibold">Description</label>
+                <label className="font-semibold">
+                    Description
+                    <span className="text-xs text-gray-500 ml-2 font-normal">
+                        (Content is automatically saved as you type)
+                    </span>
+                </label>
                 <div>
                     <MenuBar editor={editor} />
                     <div className="border border-gray-300 border-t-0 rounded-b-md p-3 min-h-[200px] prose max-w-none focus-within:ring-2 focus-within:ring-blue-500">
                         <EditorContent editor={editor} />
                     </div>
                 </div>
+                
+                {formData.description && (
+                    <details className="text-xs text-gray-500 mt-2">
+                        <summary className="cursor-pointer">View JSON Content (Debug)</summary>
+                        <pre className="bg-gray-100 p-2 rounded mt-1 overflow-auto">
+                            {JSON.stringify(formData.description, null, 2)}
+                        </pre>
+                    </details>
+                )}
+            </div>
+
+            {/* Help Docs Upload Section */}
+            <div className="flex flex-col gap-2 mt-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                <label className="font-semibold">Help Docs (Images/PDFs)</label>
+                <p className="text-xs text-gray-600">Upload documents, images, or guides to help participants</p>
+                
+                <label className="flex items-center justify-center gap-2 p-3 bg-white border border-gray-300 rounded cursor-pointer hover:bg-gray-100 transition">
+                    <Upload size={18} className="text-blue-500" />
+                    <span className="text-sm font-medium">Click to upload files</span>
+                    <input
+                        type="file"
+                        multiple
+                        accept="image/*,.pdf,.doc,.docx"
+                        onChange={handleHelpDocFilesChange}
+                        className="hidden"
+                    />
+                </label>
+
+                {/* Display uploaded files */}
+                {helpDocFiles.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                        <p className="text-sm font-medium text-gray-700">
+                            Uploaded Files ({helpDocFiles.length}):
+                        </p>
+                        <div className="space-y-1">
+                            {helpDocFiles.map((file, index) => (
+                                <div
+                                    key={index}
+                                    className="flex items-center justify-between bg-white p-2 rounded border border-gray-200"
+                                >
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <span className="text-gray-600 flex-shrink-0">📄</span>
+                                        <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                                        <span className="text-xs text-gray-500 flex-shrink-0">
+                                            ({(file.size / 1024).toFixed(2)} KB)
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeHelpDocFile(index)}
+                                        className="ml-2 p-1 text-red-500 hover:bg-red-50 rounded flex-shrink-0"
+                                        title="Remove file"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {helpDocFiles.length === 0 && (
+                    <p className="text-xs text-gray-500 text-center py-2">No files selected</p>
+                )}
             </div>
         </div>
     );

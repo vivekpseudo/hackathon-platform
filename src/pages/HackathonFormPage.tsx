@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createCompetition } from "../api/competitions";
+import { useLocalAuth } from "../context/AuthContext";
 import { CompetitionFormInput } from "../types/competition";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -17,11 +18,13 @@ import ReviewStep from "../components/Hackathonsteps/ReviewStep";
 const steps = ["Description", "Timeline", "Rewards", "Organiser", "Contact", "Review"];
 
 const CreateHackathonForm: React.FC = () => {
+  const { user } = useLocalAuth();
   const [step, setStep] = useState(1);
   const totalSteps = steps.length;
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [createdCompetition, setCreatedCompetition] = useState<any>(null);
+  const [isPublished, setIsPublished] = useState(false);
   const submittingRef = React.useRef(false);
 
   const [formData, setFormData] = useState<CompetitionFormInput>({
@@ -41,7 +44,8 @@ const CreateHackathonForm: React.FC = () => {
     competition_category: [""],
     competition_contact: { contactName: "", email: "", phonenumber: "" },
     competition_organiser: {
-      name: "",
+      name: user?.username || "",
+      email: user?.email || "",
       addressLine1: "",
       addressLine2: "",
       city: "",
@@ -69,6 +73,10 @@ const CreateHackathonForm: React.FC = () => {
   useEffect(() => () => editor?.destroy(), [editor]);
 
   // Generic Handlers
+  const handleChange = (field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handleNestedChange = (parent: string, field: string, value: any) => {
     setFormData((prev) => ({
       ...prev,
@@ -105,59 +113,10 @@ const CreateHackathonForm: React.FC = () => {
   const nextStep = () => setStep((s) => Math.min(s + 1, totalSteps));
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
 
-  // Reset form function
-  const resetForm = () => {
-    setFormData({
-      Title: "",
-      description: "",
-      startDate: "",
-      endDate: "",
-      isActive: true,
-      isCompleted: false,
-      type: "Online",
-      minMember: 1,
-      maxMember: 5,
-      feeType: "Free",
-      feePerMember: 0,
-      feePerTeam: 0,
-      isFeeForTeam: false,
-      competition_category: [""],
-      competition_contact: { contactName: "", email: "", phonenumber: "" },
-      competition_organiser: {
-        name: "",
-        addressLine1: "",
-        addressLine2: "",
-        city: "",
-        state: "",
-        pincode: "",
-        country: "",
-        entityType: "Individual",
-      },
-      competition_rewards: [
-        { title: "", description: "", amount: "", isCash: false, position: "" }
-      ],
-      competition_timelines: [
-        { title: "", description: "", startDate: "", endDate: "", type: "Online" }
-      ],
-      competition_result: "",
-      helpDocs: [],
-    });
-
-    if (editor) editor.commands.setContent("");
-
-    setMessage("");
-    setCreatedCompetition(null);
-    setStep(1);
-    submittingRef.current = false;
-  };
-
-  // Submit Handler
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  // Manual Publish Handler
+  const handlePublish = async () => {
     if (loading || submittingRef.current) {
-      console.log("⏳ Already submitting, ignoring duplicate submission");
+      console.log("Already submitting, ignoring duplicate submission");
       return;
     }
 
@@ -166,19 +125,27 @@ const CreateHackathonForm: React.FC = () => {
     setMessage("");
 
     try {
-      console.log("📝 Starting hackathon creation process...");
-      console.log("🔢 Submission attempt at:", new Date().toISOString());
+      console.log("Starting hackathon creation process...");
+      console.log("Current user:", user);
+
+      // Validate user is logged in
+      if (!user?.id) {
+        setMessage("You must be logged in to create a hackathon");
+        setLoading(false);
+        submittingRef.current = false;
+        return;
+      }
 
       // Validate required fields
       if (!formData.Title?.trim()) {
-        setMessage("❌ Title is required");
+        setMessage("Title is required");
         setLoading(false);
         submittingRef.current = false;
         return;
       }
 
       if (!formData.startDate || !formData.endDate) {
-        setMessage("❌ Start Date and End Date are required");
+        setMessage("Start Date and End Date are required");
         setLoading(false);
         submittingRef.current = false;
         return;
@@ -189,39 +156,37 @@ const CreateHackathonForm: React.FC = () => {
       );
 
       if (!hasValidTimeline) {
-        setMessage("❌ At least one valid timeline is required");
+        setMessage("At least one valid timeline is required");
         setLoading(false);
         submittingRef.current = false;
         return;
       }
 
-      // Show Toastify message before publishing
-      toast.info("🚀 This competition will be published for everyone", {
+      toast.info("This competition will be published for everyone", {
         position: "top-center",
         autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
       });
 
-      console.log("✅ Validation passed, creating competition...");
-      console.log("📦 Form data:", formData);
+      console.log("Validation passed, creating competition...");
+      console.log("Form data:", formData);
 
-      const response = await createCompetition(formData);
+      const response = await createCompetition(formData, user);
 
       console.log("Backend response:", response);
-      console.log("Response data:", response.data);
 
-      // Store the entire response for ReviewStep
       setCreatedCompetition(response.data);
-
-      setMessage("✅ Hackathon published successfully!");
+      setMessage("Hackathon published successfully! Redirecting...");
+      setIsPublished(true);
       submittingRef.current = false;
-      console.log("✅ Hackathon creation complete!");
+      console.log("Hackathon creation complete!");
+
+      // Redirect after 2 seconds
+      setTimeout(() => {
+        window.location.href = "/hackathons-management";
+      }, 2000);
+
     } catch (error: any) {
-      console.error("❌ Error creating hackathon:", error);
+      console.error("Error creating hackathon:", error);
       const status = error?.response?.status;
       const errorMsg = error?.response?.data?.error?.message;
       const errorDetails = error?.response?.data?.error?.details;
@@ -251,8 +216,8 @@ const CreateHackathonForm: React.FC = () => {
         userMessage = errorMsg || "Failed to publish hackathon. Please try again.";
       }
 
-      setMessage(`❌ ${userMessage}`);
-      console.error("🔍 Full error details:", { status, message: errorMsg, details: errorDetails });
+      setMessage(`Error: ${userMessage}`);
+      console.error("Full error details:", { status, message: errorMsg, details: errorDetails });
       submittingRef.current = false;
     } finally {
       setLoading(false);
@@ -315,7 +280,7 @@ const CreateHackathonForm: React.FC = () => {
           />
         );
       case 4:
-        return <OrganizerStep formData={formData} handleNestedChange={handleNestedChange} />;
+        return <OrganizerStep formData={formData} handleNestedChange={handleNestedChange} handleChange={handleChange} />;
       case 5:
         return <ContactStep formData={formData} handleNestedChange={handleNestedChange} />;
       case 6:
@@ -330,15 +295,16 @@ const CreateHackathonForm: React.FC = () => {
       <h1 className="text-2xl font-semibold mb-6 text-center">Create New Hackathon</h1>
       {renderStepper()}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form className="space-y-4">
         {renderStepForm()}
 
         <div className="flex justify-between mt-6">
-          {step > 1 && !message.startsWith("✅") && (
+          {step > 1 && !isPublished && (
             <button
               type="button"
               onClick={prevStep}
               className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+              disabled={loading}
             >
               Back
             </button>
@@ -353,34 +319,16 @@ const CreateHackathonForm: React.FC = () => {
               Next
             </button>
           ) : (
-            <>
-              {!message.startsWith("✅") ? (
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400 disabled:cursor-not-allowed ml-auto"
-                >
-                  {loading ? "Publishing..." : "Publish"}
-                </button>
-              ) : (
-                <div className="flex gap-4 ml-auto">
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                  >
-                    Create Another Hackathon
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => (window.location.href = "/hackathons-management")}
-                    className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-                  >
-                    View All Hackathons
-                  </button>
-                </div>
-              )}
-            </>
+            !isPublished && (
+              <button
+                type="button"
+                onClick={handlePublish}
+                disabled={loading}
+                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400 disabled:cursor-not-allowed ml-auto"
+              >
+                {loading ? "Publishing..." : "Publish"}
+              </button>
+            )
           )}
         </div>
       </form>
@@ -388,7 +336,7 @@ const CreateHackathonForm: React.FC = () => {
       {message && (
         <div
           className={`mt-4 p-4 rounded-lg text-center ${
-            message.startsWith("❌")
+            message.startsWith("Error")
               ? "bg-red-100 border border-red-400 text-red-700"
               : "bg-green-100 border border-green-400 text-green-700"
           }`}

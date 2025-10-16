@@ -1,14 +1,28 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useLocalAuth } from "../../context/AuthContext";
 
 interface Props {
   formData: any;
   handleNestedChange: (parent: string, field: string, value: any) => void;
+  handleChange: (field: string, value: any) => void;
 }
 
-const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange }) => {
-  // Ensure organiser object exists with all default fields
+const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleChange }) => {
+  const { user } = useLocalAuth();
+
+  // ✅ Auto-set the user info reference for competition_organiser
+  useEffect(() => {
+    if (user?.id) {
+      // Always include the logged-in user
+      handleNestedChange("competition_organiser", "users_permissions_user", {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+      });
+    }
+  }, [user]);
+
   const organiser = {
-    name: "",
     addressLine1: "",
     addressLine2: "",
     city: "",
@@ -19,18 +33,17 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange }) => {
     ...(formData.competition_organiser || {}),
   };
 
-  // Options for dropdowns
   const countryOptions = [
-    "India",
-    "United States",
-    "United Kingdom",
-    "Canada",
-    "Australia",
-    "Germany",
-    "France",
-    "Singapore",
-    "Japan",
-    "China",
+    { code: "IN", name: "India" },
+    { code: "US", name: "United States" },
+    { code: "GB", name: "United Kingdom" },
+    { code: "CA", name: "Canada" },
+    { code: "AU", name: "Australia" },
+    { code: "DE", name: "Germany" },
+    { code: "FR", name: "France" },
+    { code: "SG", name: "Singapore" },
+    { code: "JP", name: "Japan" },
+    { code: "CN", name: "China" },
   ];
 
   const entityTypes = [
@@ -44,15 +57,48 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Organiser Name */}
+      {/* Hidden user ID field for relation */}
+      <input
+        type="hidden"
+        value={JSON.stringify(formData.competition_organiser?.users_permissions_user || {})}
+      />
+
+      {/* User Info Display */}
+      {user && (
+        <div className="flex flex-col gap-2 bg-blue-50 p-4 rounded border border-blue-200">
+          <label className="font-semibold text-blue-900">Organiser Account</label>
+          <div className="text-blue-800 space-y-1">
+            <p><strong>Username:</strong> {user.username}</p>
+            <p><strong>Email:</strong> {user.email}</p>
+          </div>
+          <p className="text-xs text-blue-600 italic">
+            This hackathon will be linked to your account.
+          </p>
+        </div>
+      )}
+
+      {/* Other fields */}
       <div className="flex flex-col gap-2">
-        <label className="font-semibold">Organiser Name</label>
+        <label className="font-semibold">Name</label>
         <input
           type="text"
-          placeholder="Enter organiser name"
-          value={organiser.name}
+          placeholder="Your Name"
+          value={organiser.username || user?.username || ""}
           onChange={(e) =>
-            handleNestedChange("competition_organiser", "name", e.target.value)
+            handleNestedChange("competition_organiser", "username", e.target.value)
+          }
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="font-semibold">Email</label>
+        <input
+          type="email"
+          placeholder="Your Email"
+          value={organiser.email || user?.email || ""}
+          onChange={(e) =>
+            handleNestedChange("competition_organiser", "email", e.target.value)
           }
           className="w-full p-2 border rounded"
         />
@@ -66,11 +112,7 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange }) => {
           placeholder="Address Line 1"
           value={organiser.addressLine1}
           onChange={(e) =>
-            handleNestedChange(
-              "competition_organiser",
-              "addressLine1",
-              e.target.value
-            )
+            handleNestedChange("competition_organiser", "addressLine1", e.target.value)
           }
           className="w-full p-2 border rounded"
         />
@@ -84,11 +126,7 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange }) => {
           placeholder="Address Line 2"
           value={organiser.addressLine2}
           onChange={(e) =>
-            handleNestedChange(
-              "competition_organiser",
-              "addressLine2",
-              e.target.value
-            )
+            handleNestedChange("competition_organiser", "addressLine2", e.target.value)
           }
           className="w-full p-2 border rounded"
         />
@@ -130,57 +168,41 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange }) => {
           placeholder="Pincode"
           value={organiser.pincode}
           onChange={(e) =>
-            handleNestedChange(
-              "competition_organiser",
-              "pincode",
-              e.target.value
-            )
+            handleNestedChange("competition_organiser", "pincode", e.target.value)
           }
           className="w-full p-2 border rounded"
         />
       </div>
 
-      {/* Country Dropdown */}
+      {/* Country */}
       <div className="flex flex-col gap-2">
         <label className="font-semibold">Country</label>
         <select
           value={organiser.country}
           onChange={(e) =>
-            handleNestedChange(
-              "competition_organiser",
-              "country",
-              e.target.value
-            )
+            handleNestedChange("competition_organiser", "country", e.target.value)
           }
           className="w-full p-2 border rounded bg-white"
         >
-          <option value="">Select or enter a value</option>
-          {countryOptions.map((country) => (
-            <option key={country} value={country}>
-              {country}
-            </option>
+          <option value="">Select a country</option>
+          {countryOptions.map((c) => (
+            <option key={c.code} value={c.code}>{c.name}</option>
           ))}
         </select>
       </div>
 
-      {/* Entity Type Dropdown */}
+      {/* Entity Type */}
       <div className="flex flex-col gap-2">
         <label className="font-semibold">Entity Type</label>
         <select
           value={organiser.entityType}
           onChange={(e) =>
-            handleNestedChange(
-              "competition_organiser",
-              "entityType",
-              e.target.value
-            )
+            handleNestedChange("competition_organiser", "entityType", e.target.value)
           }
           className="w-full p-2 border rounded bg-white"
         >
           {entityTypes.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
+            <option key={type} value={type}>{type}</option>
           ))}
         </select>
       </div>

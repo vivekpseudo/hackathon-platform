@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getAllCompetitions } from '../api/competitions';
-import { makePutRequest } from '../libs/axios';
+import { getUserRegistrations } from '../api/competitions';
+import { useLocalAuth } from '../context/AuthContext';
+import { makePutRequest, makeGetRequest } from '../libs/axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -14,10 +15,14 @@ interface Hackathon {
     isActive: boolean;
     publishedAt: string | null;
     createdAt: string;
+    competition_organiser?: any;
   };
+  isCreated?: boolean;
+  isJoined?: boolean;
 }
 
 const HackathonManagementPage: React.FC = () => {
+  const { user } = useLocalAuth();
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,193 +31,177 @@ const HackathonManagementPage: React.FC = () => {
 
   useEffect(() => {
     fetchHackathons();
-  }, []);
+  }, [user]);
 
   const fetchHackathons = async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      const response = await getAllCompetitions(0, 100);
-      console.log('Fetched response:', response);
-      setHackathons(response.data || []);
+
+      // 1️⃣ Fetch all hackathons
+      const allResponse = await makeGetRequest(
+        '/competitions?populate[competition_organiser][populate]=users_permissions_user&pagination[limit]=100&sort[0]=createdAt:desc'
+      );
+      const allHackathons: Hackathon[] = allResponse.data || [];
+
+      // 2️⃣ Fetch user registrations
+      const registrationsResponse = await getUserRegistrations(user.email, 0, 1000);
+      const joinedIds = new Set<number>();
+      if (registrationsResponse.data && Array.isArray(registrationsResponse.data)) {
+        registrationsResponse.data.forEach((reg: any) => {
+          const id = reg.attributes?.competition?.data?.id;
+          if (id) joinedIds.add(id);
+        });
+      }
+
+      // 3️⃣ Mark hackathons as joined/created
+      const processedHackathons = allHackathons.map(h => {
+        // Fix: ensure organisers is always an array
+        const organisersData = h.attributes.competition_organiser?.data;
+        const organisersArray = Array.isArray(organisersData)
+          ? organisersData
+          : organisersData
+          ? [organisersData]
+          : [];
+
+        const isCreated = organisersArray.some(
+          (org: any) => org.attributes.users_permissions_user?.data?.id === user.id
+        );
+        const isJoined = joinedIds.has(h.id);
+
+        return { ...h, isCreated, isJoined };
+      });
+
+      setHackathons(processedHackathons);
     } catch (err: any) {
-      console.error('Error:', err);
+      console.error(err);
       setError('Failed to load hackathons');
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePublish = async (id: number, title: string) => {
-    if (window.confirm(`Publish "${title}"?`)) {
-      try {
-        await makePutRequest(`competitions/${id}`, {
-          data: { publishedAt: new Date().toISOString() },
-        });
-        setHackathons(prev =>
-          prev.map(h =>
-            h.id === id
-              ? { ...h, attributes: { ...h.attributes, publishedAt: new Date().toISOString() } }
-              : h
-          )
-        );
-        toast.success(`Published successfully!`);
-      } catch (err: any) {
-        toast.error(`Failed to publish`);
-      }
+  const handlePublish = async (id: number) => {
+    try {
+      await makePutRequest(`competitions/${id}`, { data: { publishedAt: new Date().toISOString() } });
+      setHackathons(prev =>
+        prev.map(h => (h.id === id ? { ...h, attributes: { ...h.attributes, publishedAt: new Date().toISOString() } } : h))
+      );
+      toast.success('Published successfully!');
+    } catch {
+      toast.error('Failed to publish');
     }
   };
 
-  const handleUnpublish = async (id: number, title: string) => {
-    if (window.confirm(`Unpublish "${title}"?`)) {
-      try {
-        await makePutRequest(`competitions/${id}`, { data: { publishedAt: null } });
-        setHackathons(prev =>
-          prev.map(h =>
-            h.id === id ? { ...h, attributes: { ...h.attributes, publishedAt: null } } : h
-          )
-        );
-        toast.success(`Unpublished successfully!`);
-      } catch (err: any) {
-        toast.error(`Failed to unpublish`);
-      }
+  const handleUnpublish = async (id: number) => {
+    try {
+      await makePutRequest(`competitions/${id}`, { data: { publishedAt: null } });
+      setHackathons(prev =>
+        prev.map(h => (h.id === id ? { ...h, attributes: { ...h.attributes, publishedAt: null } } : h))
+      );
+      toast.success('Unpublished successfully!');
+    } catch {
+      toast.error('Failed to unpublish');
     }
   };
 
   const handleEdit = (id: number) => navigate(`/hackathons-management/${id}/edit`);
   const handleView = (id: number) => navigate(`/hackathons/${id}`);
+  const handleSubmission = (id: number) => navigate(`/hackathons/${id}/submission`);
 
   const filteredHackathons = hackathons.filter(h =>
     h.attributes.Title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) {
-    return (
-      <div className="container mx-auto py-8 px-4 text-center">
-        <p className="text-gray-600">Loading hackathons...</p>
-      </div>
-    );
-  }
+  // Split hackathons - Show ALL created and joined hackathons
+  const createdHackathons = filteredHackathons.filter(h => h.isCreated);
+  const joinedHackathons = filteredHackathons.filter(h => h.isJoined);
+
+  if (loading) return <p className="text-center py-8">Loading hackathons...</p>;
 
   return (
     <div className="container mx-auto py-8 px-4">
       <ToastContainer position="top-right" autoClose={3000} theme="colored" />
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Hackathon Management</h1>
-        <p className="text-gray-600">Manage your hackathons and track their status</p>
-      </div>
-
-      <div className="mb-6">
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Hackathon Management</h1>
+          <p className="text-gray-600">View, join, and create hackathons</p>
+        </div>
         <Link
           to="/hackathons-management/create"
-          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-6 rounded inline-flex items-center gap-2"
+          className="bg-green-500 hover:bg-green-700 text-white py-2 px-6 rounded font-semibold"
         >
-          + Create New Hackathon
+          + Create Hackathon
         </Link>
       </div>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-          <p className="font-semibold">Error</p>
-          <p>{error}</p>
-          <button onClick={fetchHackathons} className="mt-2 text-red-600 underline">
-            Try Again
-          </button>
-        </div>
-      )}
+      {error && <p className="text-red-600 mb-4">{error}</p>}
 
-      {hackathons.length > 0 && (
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder="Search hackathons..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      )}
+      <input
+        type="text"
+        placeholder="Search hackathons..."
+        value={searchTerm}
+        onChange={e => setSearchTerm(e.target.value)}
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-6"
+      />
 
-      {filteredHackathons.length > 0 ? (
-        <div className="shadow-md rounded-lg overflow-hidden bg-white">
-          <div className="hidden md:block">
-            <div className="bg-gray-100 py-4 px-6 grid grid-cols-6 gap-4 font-semibold text-gray-700 border-b">
-              <div>Title</div>
-              <div>Start Date</div>
-              <div>End Date</div>
-              <div>Status</div>
-              <div>Created</div>
-              <div>Actions</div>
+      {/* Created by Me */}
+      <h2 className="text-2xl font-bold mb-4">Created by Me ({createdHackathons.length})</h2>
+      {createdHackathons.length === 0 && <p className="text-gray-500 mb-4">You haven't created any hackathons yet.</p>}
+      <div className="grid md:grid-cols-1 gap-4 mb-8">
+        {createdHackathons.map(h => (
+          <div key={h.id} className="bg-white shadow-md rounded-lg p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h3 className="font-bold text-lg">{h.attributes.Title}</h3>
+              <p className="text-gray-600 text-sm">
+                Start: {new Date(h.attributes.startDate).toLocaleDateString()} | End: {new Date(h.attributes.endDate).toLocaleDateString()}
+              </p>
+              <div className="flex gap-2 mt-1">
+                {h.attributes.publishedAt && <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">Published</span>}
+                {h.isJoined && <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">Joined</span>}
+              </div>
             </div>
-
-            {filteredHackathons.map(hackathon => (
-              <div key={hackathon.id} className="py-4 px-6 grid grid-cols-6 gap-4 items-center border-b hover:bg-gray-50">
-                <div className="font-semibold text-gray-800 truncate">{hackathon.attributes.Title}</div>
-                <div className="text-gray-600 text-sm">{new Date(hackathon.attributes.startDate).toLocaleDateString()}</div>
-                <div className="text-gray-600 text-sm">{new Date(hackathon.attributes.endDate).toLocaleDateString()}</div>
-                <div>
-                  {hackathon.attributes.publishedAt ? (
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">Published</span>
-                  ) : (
-                    <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">Draft</span>
-                  )}
-                </div>
-                <div className="text-gray-600 text-sm">{new Date(hackathon.attributes.createdAt).toLocaleDateString()}</div>
-                <div className="flex gap-2">
-                  <button onClick={() => handleView(hackathon.id)} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded text-xs font-semibold">View</button>
-                  <button onClick={() => handleEdit(hackathon.id)} className="bg-gray-500 hover:bg-gray-700 text-white py-1 px-2 rounded text-xs font-semibold">Edit</button>
-                  {hackathon.attributes.publishedAt ? (
-                    <button onClick={() => handleUnpublish(hackathon.id, hackathon.attributes.Title)} className="bg-orange-500 hover:bg-orange-700 text-white py-1 px-2 rounded text-xs font-semibold">Unpublish</button>
-                  ) : (
-                    <button onClick={() => handlePublish(hackathon.id, hackathon.attributes.Title)} className="bg-green-500 hover:bg-green-700 text-white py-1 px-2 rounded text-xs font-semibold">Publish</button>
-                  )}
-                </div>
-              </div>
-            ))}
+            <div className="flex gap-2 flex-wrap mt-2 md:mt-0">
+              <button onClick={() => handleView(h.id)} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">View</button>
+              <button onClick={() => handleEdit(h.id)} className="bg-gray-500 hover:bg-gray-700 text-white py-1 px-3 rounded text-sm">Edit</button>
+              {h.attributes.publishedAt
+                ? <button onClick={() => handleUnpublish(h.id)} className="bg-orange-500 hover:bg-orange-700 text-white py-1 px-3 rounded text-sm">Unpublish</button>
+                : <button onClick={() => handlePublish(h.id)} className="bg-green-500 hover:bg-green-700 text-white py-1 px-3 rounded text-sm">Publish</button>
+              }
+            </div>
           </div>
+        ))}
+      </div>
 
-          <div className="md:hidden space-y-4 p-4">
-            {filteredHackathons.map(hackathon => (
-              <div key={hackathon.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <h3 className="font-semibold text-gray-800 text-lg mb-1">{hackathon.attributes.Title}</h3>
-                <div className="flex gap-2 mb-2">
-                  {hackathon.attributes.publishedAt ? (
-                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">Published</span>
-                  ) : (
-                    <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold">Draft</span>
-                  )}
-                </div>
-                <div className="text-sm text-gray-600 mb-4 space-y-1">
-                  <p><strong>Starts:</strong> {new Date(hackathon.attributes.startDate).toLocaleDateString()}</p>
-                  <p><strong>Ends:</strong> {new Date(hackathon.attributes.endDate).toLocaleDateString()}</p>
-                  <p><strong>Created:</strong> {new Date(hackathon.attributes.createdAt).toLocaleDateString()}</p>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  <button onClick={() => handleView(hackathon.id)} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm font-semibold flex-1">View</button>
-                  <button onClick={() => handleEdit(hackathon.id)} className="bg-gray-500 hover:bg-gray-700 text-white py-1 px-3 rounded text-sm font-semibold flex-1">Edit</button>
-                  {hackathon.attributes.publishedAt ? (
-                    <button onClick={() => handleUnpublish(hackathon.id, hackathon.attributes.Title)} className="bg-orange-500 hover:bg-orange-700 text-white py-1 px-3 rounded text-sm font-semibold flex-1">Unpublish</button>
-                  ) : (
-                    <button onClick={() => handlePublish(hackathon.id, hackathon.attributes.Title)} className="bg-green-500 hover:bg-green-700 text-white py-1 px-3 rounded text-sm font-semibold flex-1">Publish</button>
-                  )}
-                </div>
+      {/* Joined by Me */}
+      <h2 className="text-2xl font-bold mb-4">Joined by Me ({joinedHackathons.length})</h2>
+      {joinedHackathons.length === 0 && <p className="text-gray-500 mb-4">You haven't joined any hackathons yet.</p>}
+      <div className="grid md:grid-cols-1 gap-4">
+        {joinedHackathons.map(h => (
+          <div key={h.id} className="bg-white shadow-md rounded-lg p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h3 className="font-bold text-lg">{h.attributes.Title}</h3>
+              <p className="text-gray-600 text-sm">
+                Start: {new Date(h.attributes.startDate).toLocaleDateString()} | End: {new Date(h.attributes.endDate).toLocaleDateString()}
+              </p>
+              <div className="flex gap-2 mt-1">
+                {h.attributes.publishedAt && <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">Published</span>}
+                {h.isCreated && <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold">Created by You</span>}
               </div>
-            ))}
+            </div>
+            <div className="flex gap-2 flex-wrap mt-2 md:mt-0">
+              <button onClick={() => handleView(h.id)} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">View</button>
+              <button onClick={() => handleSubmission(h.id)} className="bg-purple-500 hover:bg-purple-700 text-white py-1 px-3 rounded text-sm">Submission</button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="bg-gray-50 rounded-lg p-12 text-center">
-          <p className="text-gray-600 text-lg mb-4">{searchTerm ? 'No hackathons found.' : 'No hackathons created yet.'}</p>
-          <Link to="/hackathons-management/create" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded">Create Your First Hackathon</Link>
-        </div>
-      )}
-
-      {hackathons.length > 0 && (
-        <div className="mt-6 text-sm text-gray-600">
-          <p>Showing {filteredHackathons.length} of {hackathons.length} hackathons</p>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 };

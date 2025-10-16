@@ -11,6 +11,7 @@ import JudgeDashboardPage from "./pages/JudgeDashboardPage";
 import AdminHackathonsPage from "./pages/AdminHackathonsPage"; // manage hackathons
 import HackathonFormPage from "./pages/HackathonFormPage";
 import HackathonManagementPage from "./pages/HackathonManagementPage";
+import HackathonSubmissionPage from './pages/HackathonSubmissionPage';
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./context/AuthContext";
@@ -39,6 +40,7 @@ function App() {
               <Route path="/hackathons-management" element={<HackathonManagementPage />} />
                <Route path="/hackathons-management/:id/edit" element={<EditHackathonForm />} />
                <Route path="/hackathon/:id/join" element={<HackathonJoinPage />} />
+               <Route path="/hackathons/:id/submission" element={<HackathonSubmissionPage />} />
               {/* Protected routes */}
               <Route
                 path="/teams"

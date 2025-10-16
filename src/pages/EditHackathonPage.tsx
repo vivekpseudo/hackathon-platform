@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getCompetitionById } from '../api/competitions';
-import { makePutRequest } from '../libs/axios';
+import { makePutRequest, makePostRequest } from '../libs/axios';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { toast, ToastContainer } from 'react-toastify';
+import { useLocalAuth } from '../context/AuthContext';
 import 'react-toastify/dist/ReactToastify.css';
 
 // Step Components
@@ -21,13 +22,14 @@ const EditHackathonForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const numericId = Number(id);
   const navigate = useNavigate();
+  const { user } = useLocalAuth();
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<any>({
     Title: '',
-    description: '',
+    description: null,
     startDate: '',
     endDate: '',
     isActive: true,
@@ -42,7 +44,6 @@ const EditHackathonForm: React.FC = () => {
     competition_category: [''],
     competition_contact: { contactName: '', email: '', phonenumber: '' },
     competition_organiser: {
-      name: '',
       addressLine1: '',
       addressLine2: '',
       city: '',
@@ -50,6 +51,7 @@ const EditHackathonForm: React.FC = () => {
       pincode: '',
       country: '',
       entityType: 'Individual',
+      users_permissions_user: null,
     },
     competition_rewards: [{ title: '', description: '', amount: '', isCash: false, position: '' }],
     competition_timelines: [{ title: '', description: '', startDate: '', endDate: '', type: 'Online' }],
@@ -57,11 +59,15 @@ const EditHackathonForm: React.FC = () => {
     helpDocs: [],
   });
 
+  // ✅ TipTap editor with JSON output (not HTML)
   const editor = useEditor({
     extensions: [StarterKit],
-    content: formData.description || '<p></p>',
-    onUpdate: ({ editor }) =>
-      setFormData((prev: any) => ({ ...prev, description: editor.getHTML() })),
+    content: '',
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm max-w-none focus:outline-none min-h-[200px]',
+      },
+    },
   });
 
   useEffect(() => {
@@ -88,9 +94,13 @@ const EditHackathonForm: React.FC = () => {
           { title: '', description: '', amount: '', isCash: false, position: '' },
         ];
 
+      // ✅ Get organiser data with user relation
+      const organiserData = hackathon.competition_organiser?.data?.attributes || {};
+      const organiserUserId = organiserData.users_permissions_user?.data?.id || user?.id || null;
+
       setFormData({
         Title: hackathon.Title || '',
-        description: hackathon.description || '',
+        description: hackathon.description || null, // ✅ Keep as JSON
         startDate: hackathon.startDate || '',
         endDate: hackathon.endDate || '',
         isActive: hackathon.isActive ?? true,
@@ -102,32 +112,43 @@ const EditHackathonForm: React.FC = () => {
         feePerMember: hackathon.feePerMember || 0,
         feePerTeam: hackathon.feePerTeam || 0,
         isFeeForTeam: hackathon.isFeeForTeam ?? false,
-        competition_category: hackathon.competition_category || [''],
+        competition_category: hackathon.competition_category?.data?.id 
+          ? [hackathon.competition_category.data.id] 
+          : [''],
         competition_contact:
           hackathon.competition_contact?.data?.attributes || { contactName: '', email: '', phonenumber: '' },
-        competition_organiser:
-          hackathon.competition_organiser?.data?.attributes || {
-            name: '',
-            addressLine1: '',
-            addressLine2: '',
-            city: '',
-            state: '',
-            pincode: '',
-            country: '',
-            entityType: 'Individual',
-          },
+        competition_organiser: {
+          id: hackathon.competition_organiser?.data?.id || null,
+          addressLine1: organiserData.addressLine1 || '',
+          addressLine2: organiserData.addressLine2 || '',
+          city: organiserData.city || '',
+          state: organiserData.state || '',
+          pincode: organiserData.pincode || '',
+          country: organiserData.country || '',
+          entityType: organiserData.entityType || 'Individual',
+          users_permissions_user: organiserUserId,
+        },
         competition_rewards: rewards,
         competition_timelines: timelines,
         competition_result: hackathon.competition_result || '',
         helpDocs: hackathon.helpDocs || [],
       });
 
-      editor?.commands.setContent(hackathon.description || '');
+      // ✅ Load description into editor
+      if (editor && hackathon.description) {
+        if (typeof hackathon.description === 'object' && hackathon.description.content) {
+          // TipTap JSON format
+          editor.commands.setContent(hackathon.description);
+          console.log("✅ Loaded JSON description into editor");
+        } else if (typeof hackathon.description === 'string') {
+          // Legacy HTML/string format
+          editor.commands.setContent(hackathon.description);
+          console.log("✅ Loaded string description into editor");
+        }
+      }
     } catch (err) {
       console.error('Error fetching hackathon:', err);
-      toast.error('Failed to load hackathon', {
-        style: { backgroundColor: '#ffffff', color: '#f44336', border: '1px solid #f44336' },
-      });
+      toast.error('Failed to load hackathon');
     } finally {
       setLoading(false);
     }
@@ -137,6 +158,13 @@ const EditHackathonForm: React.FC = () => {
     setFormData((prev: any) => ({
       ...prev,
       [parent]: { ...prev[parent], [field]: value },
+    }));
+  };
+
+  const handleChange = (field: string, value: any) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      [field]: value,
     }));
   };
 
@@ -172,28 +200,92 @@ const EditHackathonForm: React.FC = () => {
     try {
       setSaving(true);
 
-      const plainTextDescription = formData.description?.replace(/<[^>]*>/g, '')?.trim() || '';
-      const descriptionJSON = plainTextDescription
-        ? {
-            blocks: [
-              {
-                key: 'key1',
-                text: plainTextDescription,
-                type: 'paragraph',
-                depth: 0,
-                inlineStyleRanges: [],
-                entityRanges: [],
-                data: {},
-              },
-            ],
-            entityMap: {},
-          }
-        : null;
+      // ✅ Get description from TipTap editor as JSON
+      let descriptionToSave = null;
+      if (editor) {
+        const editorJSON = editor.getJSON();
+        // Only save if there's actual content
+        if (editorJSON.content && editorJSON.content.length > 0) {
+          descriptionToSave = editorJSON;
+          console.log("✅ Using TipTap editor JSON content:", editorJSON);
+        }
+      }
 
+      // ✅ Update or create organiser
+      let organiserId = formData.competition_organiser?.id || null;
+      
+      if (formData.competition_organiser) {
+        const organiserPayload = {
+          addressLine1: formData.competition_organiser.addressLine1 || '',
+          addressLine2: formData.competition_organiser.addressLine2 || '',
+          city: formData.competition_organiser.city || '',
+          state: formData.competition_organiser.state || '',
+          pincode: formData.competition_organiser.pincode || '',
+          country: formData.competition_organiser.country || '',
+          entityType: formData.competition_organiser.entityType || 'Individual',
+          users_permissions_user: user?.id, // ✅ Link to current user
+        };
+
+        if (organiserId) {
+          // Update existing organiser
+          try {
+            await makePutRequest(`competition-organisers/${organiserId}`, {
+              data: organiserPayload
+            });
+            console.log("✅ Organiser updated:", organiserId);
+          } catch (err) {
+            console.error("❌ Organiser update failed:", err);
+          }
+        } else {
+          // Create new organiser
+          try {
+            const res = await makePostRequest("competition-organisers", {
+              data: organiserPayload
+            });
+            organiserId = res.data.data.id;
+            console.log("✅ Organiser created:", organiserId);
+          } catch (err) {
+            console.error("❌ Organiser creation failed:", err);
+          }
+        }
+      }
+
+      // ✅ Update contact if exists
+      let contactId = formData.competition_contact?.id || null;
+      if (formData.competition_contact?.email) {
+        const contactPayload = {
+          contactName: formData.competition_contact.contactName || '',
+          email: formData.competition_contact.email || '',
+          phonenumber: formData.competition_contact.phonenumber || '',
+        };
+
+        if (contactId) {
+          try {
+            await makePutRequest(`competition-contacts/${contactId}`, {
+              data: contactPayload
+            });
+            console.log("✅ Contact updated:", contactId);
+          } catch (err) {
+            console.error("❌ Contact update failed:", err);
+          }
+        } else {
+          try {
+            const res = await makePostRequest("competition-contacts", {
+              data: contactPayload
+            });
+            contactId = res.data.data.id;
+            console.log("✅ Contact created:", contactId);
+          } catch (err) {
+            console.error("❌ Contact creation failed:", err);
+          }
+        }
+      }
+
+      // ✅ Prepare competition update payload
       const payload = {
         data: {
           Title: formData.Title,
-          description: descriptionJSON,
+          description: descriptionToSave, // ✅ TipTap JSON format
           startDate: formData.startDate,
           endDate: formData.endDate,
           isActive: formData.isActive,
@@ -205,22 +297,24 @@ const EditHackathonForm: React.FC = () => {
           feePerMember: formData.feePerMember,
           feePerTeam: formData.feePerTeam,
           isFeeForTeam: formData.isFeeForTeam,
+          competition_category: formData.competition_category?.[0] || null,
+          competition_organiser: organiserId,
+          competition_contact: contactId,
         },
       };
+
+      console.log("📤 Update payload:", payload);
 
       await makePutRequest(`competitions/${numericId}`, payload);
 
       toast.success('Hackathon updated successfully!', {
         onClose: () => navigate('/hackathons-management'),
         autoClose: 2000,
-        style: { backgroundColor: '#ffffff', color: '#000000', border: '1px solid #4caf50' },
       });
     } catch (err: any) {
       console.error('Error updating:', err);
       const errorMsg = err?.response?.data?.error?.message || err.message;
-      toast.error(`Failed to update: ${errorMsg}`, {
-        style: { backgroundColor: '#ffffff', color: '#f44336', border: '1px solid #f44336' },
-      });
+      toast.error(`Failed to update: ${errorMsg}`);
       setSaving(false);
     }
   };
@@ -284,7 +378,13 @@ const EditHackathonForm: React.FC = () => {
           />
         );
       case 4:
-        return <OrganizerStep formData={formData} handleNestedChange={handleNestedChange} />;
+        return (
+          <OrganizerStep 
+            formData={formData} 
+            handleNestedChange={handleNestedChange}
+            handleChange={handleChange}
+          />
+        );
       case 5:
         return <ContactStep formData={formData} handleNestedChange={handleNestedChange} />;
       case 6:
@@ -341,7 +441,6 @@ const EditHackathonForm: React.FC = () => {
         </div>
       </form>
 
-      {/* Toast container */}
       <ToastContainer position="top-right" autoClose={2000} theme="colored" />
     </div>
   );
