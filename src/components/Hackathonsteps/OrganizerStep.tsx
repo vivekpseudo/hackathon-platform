@@ -10,17 +10,20 @@ interface Props {
 const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleChange }) => {
   const { user } = useLocalAuth();
 
-  // ✅ Auto-set the user info reference for competition_organiser
   useEffect(() => {
-    if (user?.id) {
-      // Always include the logged-in user
-      handleNestedChange("competition_organiser", "users_permissions_user", {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-      });
-    }
-  }, [user]);
+  if (user?.id) {
+    handleNestedChange("competition_organiser", "users_permissions_user", {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+    });
+
+
+    handleNestedChange("competition_organiser", "email", user.email);
+    handleNestedChange("competition_organiser", "username", user.username);
+  }
+}, [user]);
+
 
   const organiser = {
     addressLine1: "",
@@ -57,13 +60,21 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleCh
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Hidden user ID field for relation */}
       <input
         type="hidden"
         value={JSON.stringify(formData.competition_organiser?.users_permissions_user || {})}
       />
 
-    
+      {/* Organiser Account Info */}
+      {user && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-blue-900 mb-2">Organiser Account</h3>
+          <div className="text-blue-800 space-y-1">
+            <p><strong>Username:</strong> {user.username}</p>
+            <p><strong>Email:</strong> {user.email}</p>
+          </div>
+        </div>
+      )}
 
       {/* Other fields */}
       <div className="flex flex-col gap-2">
@@ -92,7 +103,6 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleCh
         />
       </div>
 
-      {/* Address Line 1 */}
       <div className="flex flex-col gap-2">
         <label className="font-semibold">Address Line 1</label>
         <input
@@ -106,7 +116,6 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleCh
         />
       </div>
 
-      {/* Address Line 2 */}
       <div className="flex flex-col gap-2">
         <label className="font-semibold">Address Line 2</label>
         <input
@@ -120,7 +129,6 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleCh
         />
       </div>
 
-      {/* City */}
       <div className="flex flex-col gap-2">
         <label className="font-semibold">City</label>
         <input
@@ -134,7 +142,6 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleCh
         />
       </div>
 
-      {/* State */}
       <div className="flex flex-col gap-2">
         <label className="font-semibold">State</label>
         <input
@@ -148,7 +155,6 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleCh
         />
       </div>
 
-      {/* Pincode */}
       <div className="flex flex-col gap-2">
         <label className="font-semibold">Pincode</label>
         <input
@@ -162,7 +168,6 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleCh
         />
       </div>
 
-      {/* Country */}
       <div className="flex flex-col gap-2">
         <label className="font-semibold">Country</label>
         <select
@@ -179,7 +184,6 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleCh
         </select>
       </div>
 
-      {/* Entity Type */}
       <div className="flex flex-col gap-2">
         <label className="font-semibold">Entity Type</label>
         <select

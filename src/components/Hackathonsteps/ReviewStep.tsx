@@ -9,6 +9,214 @@ interface Props {
   formData: any;
 }
 
+// Component to render TipTap JSON format
+const TipTapRenderer: React.FC<{ content: any }> = ({ content }) => {
+  if (!content || typeof content !== 'object') {
+    return <p className="text-gray-500">No description available</p>;
+  }
+
+  const renderNode = (node: any, index: number): React.ReactNode => {
+    if (!node || !node.type) return null;
+
+    // Handle text nodes
+    if (node.type === 'text') {
+      let text = node.text || '';
+      
+      if (node.marks) {
+        node.marks.forEach((mark: any) => {
+          if (mark.type === 'bold') text = <strong key={index}>{text}</strong>;
+          if (mark.type === 'italic') text = <em key={index}>{text}</em>;
+          if (mark.type === 'underline') text = <u key={index}>{text}</u>;
+          if (mark.type === 'strike') text = <s key={index}>{text}</s>;
+          if (mark.type === 'code') text = <code key={index} className="bg-gray-100 px-1 rounded">{text}</code>;
+        });
+      }
+      
+      return text;
+    }
+
+    // Handle paragraph
+    if (node.type === 'paragraph') {
+      return (
+        <p key={index} className="mb-3 text-gray-700">
+          {node.content?.map((child: any, idx: number) => renderNode(child, idx))}
+        </p>
+      );
+    }
+
+    // Handle headings
+    if (node.type === 'heading') {
+      const level = node.attrs?.level || 2;
+      const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+      const className = level === 1 
+        ? "text-2xl font-bold mb-3" 
+        : level === 2 
+        ? "text-xl font-bold mb-2" 
+        : "text-lg font-semibold mb-2";
+      
+      return (
+        <Tag key={index} className={className}>
+          {node.content?.map((child: any, idx: number) => renderNode(child, idx))}
+        </Tag>
+      );
+    }
+
+    // Handle bullet list
+    if (node.type === 'bulletList') {
+      return (
+        <ul key={index} className="list-disc list-inside mb-3">
+          {node.content?.map((child: any, idx: number) => renderNode(child, idx))}
+        </ul>
+      );
+    }
+
+    // Handle ordered list
+    if (node.type === 'orderedList') {
+      return (
+        <ol key={index} className="list-decimal list-inside mb-3">
+          {node.content?.map((child: any, idx: number) => renderNode(child, idx))}
+        </ol>
+      );
+    }
+
+    // Handle list item
+    if (node.type === 'listItem') {
+      return (
+        <li key={index} className="mb-1">
+          {node.content?.map((child: any, idx: number) => {
+            // For list items, we need to extract text from paragraphs
+            if (child.type === 'paragraph') {
+              return child.content?.map((textNode: any, textIdx: number) => 
+                renderNode(textNode, textIdx)
+              );
+            }
+            return renderNode(child, idx);
+          })}
+        </li>
+      );
+    }
+
+    // Handle blockquote
+    if (node.type === 'blockquote') {
+      return (
+        <blockquote key={index} className="border-l-4 border-gray-300 pl-4 italic my-3">
+          {node.content?.map((child: any, idx: number) => renderNode(child, idx))}
+        </blockquote>
+      );
+    }
+
+    // Handle code block
+    if (node.type === 'codeBlock') {
+      return (
+        <pre key={index} className="bg-gray-100 p-3 rounded overflow-x-auto mb-3">
+          <code>
+            {node.content?.map((child: any, idx: number) => renderNode(child, idx))}
+          </code>
+        </pre>
+      );
+    }
+
+    // Handle hard break
+    if (node.type === 'hardBreak') {
+      return <br key={index} />;
+    }
+
+    return null;
+  };
+
+  return (
+    <div className="prose prose-sm max-w-none">
+      {content.content?.map((node: any, index: number) => renderNode(node, index))}
+    </div>
+  );
+};
+
+// Component to render Strapi Blocks format
+const BlocksRenderer: React.FC<{ blocks: any }> = ({ blocks }) => {
+  if (!blocks || !Array.isArray(blocks)) {
+    return <p className="text-gray-500">No description available</p>;
+  }
+
+  return (
+    <div className="prose prose-sm max-w-none">
+      {blocks.map((block: any, idx: number) => {
+        if (block.type === "paragraph") {
+          return (
+            <p key={idx} className="mb-3 text-gray-700">
+              {block.children?.map((child: any, childIdx: number) => {
+                if (child.bold) {
+                  return <strong key={childIdx}>{child.text}</strong>;
+                }
+                if (child.italic) {
+                  return <em key={childIdx}>{child.text}</em>;
+                }
+                if (child.underline) {
+                  return <u key={childIdx}>{child.text}</u>;
+                }
+                if (child.strikethrough) {
+                  return <s key={childIdx}>{child.text}</s>;
+                }
+                if (child.code) {
+                  return <code key={childIdx} className="bg-gray-100 px-1 rounded">{child.text}</code>;
+                }
+                return <span key={childIdx}>{child.text}</span>;
+              })}
+            </p>
+          );
+        }
+        
+        if (block.type === "heading") {
+          const level = block.level || 2;
+          const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+          const text = block.children?.map((child: any) => child.text).join("");
+          const className = level === 1 
+            ? "text-2xl font-bold mb-3" 
+            : level === 2 
+            ? "text-xl font-bold mb-2" 
+            : "text-lg font-semibold mb-2";
+          
+          return React.createElement(Tag, { key: idx, className }, text);
+        }
+        
+        if (block.type === "list") {
+          const ListTag = block.format === "ordered" ? "ol" : "ul";
+          const listClass = block.format === "ordered" 
+            ? "list-decimal list-inside mb-3" 
+            : "list-disc list-inside mb-3";
+          
+          return (
+            <ListTag key={idx} className={listClass}>
+              {block.children?.map((item: any, itemIdx: number) => (
+                <li key={itemIdx} className="mb-1">
+                  {item.children?.map((child: any) => child.text).join("")}
+                </li>
+              ))}
+            </ListTag>
+          );
+        }
+        
+        if (block.type === "quote") {
+          return (
+            <blockquote key={idx} className="border-l-4 border-gray-300 pl-4 italic my-3">
+              {block.children?.map((child: any) => child.text).join("")}
+            </blockquote>
+          );
+        }
+        
+        if (block.type === "code") {
+          return (
+            <pre key={idx} className="bg-gray-100 p-3 rounded overflow-x-auto mb-3">
+              <code>{block.children?.map((child: any) => child.text).join("")}</code>
+            </pre>
+          );
+        }
+        
+        return null;
+      })}
+    </div>
+  );
+};
+
 const ReviewStep: React.FC<Props> = ({ formData }) => {
   const categoryMap: Record<number, string> = {
     1: "Hackathon",
@@ -17,12 +225,31 @@ const ReviewStep: React.FC<Props> = ({ formData }) => {
     4: "Competition",
   };
 
-  const getDescriptionText = () => {
-    if (!formData?.description) return "No description available.";
-    if (typeof formData.description === "string") {
-      return formData.description.replace(/<[^>]*>/g, '').trim();
+  // Render description based on format
+  const renderDescription = () => {
+    if (!formData?.description) {
+      return <p className="text-gray-500">No description available</p>;
     }
-    return "No description available.";
+
+    // If description is a string
+    if (typeof formData.description === "string") {
+      return <p className="text-gray-700">{formData.description}</p>;
+    }
+
+    // If description is an object (check for TipTap or Strapi Blocks format)
+    if (typeof formData.description === "object") {
+      // TipTap format has a 'type' field at root level with value 'doc'
+      if (formData.description.type === 'doc') {
+        return <TipTapRenderer content={formData.description} />;
+      }
+      
+      // Strapi Blocks format is an array
+      if (Array.isArray(formData.description)) {
+        return <BlocksRenderer blocks={formData.description} />;
+      }
+    }
+
+    return <p className="text-gray-500">Description format not recognized</p>;
   };
 
   return (
@@ -33,9 +260,10 @@ const ReviewStep: React.FC<Props> = ({ formData }) => {
       </h1>
 
       {/* Description */}
-      <p className="text-gray-700 mb-6">
-        {getDescriptionText()}
-      </p>
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-2">Description</h2>
+        {renderDescription()}
+      </div>
 
       {/* Details */}
       <div className="mb-6 mt-6">
