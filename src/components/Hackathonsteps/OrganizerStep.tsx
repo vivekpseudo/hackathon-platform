@@ -63,19 +63,7 @@ const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleCh
         value={JSON.stringify(formData.competition_organiser?.users_permissions_user || {})}
       />
 
-      {/* User Info Display */}
-      {user && (
-        <div className="flex flex-col gap-2 bg-blue-50 p-4 rounded border border-blue-200">
-          <label className="font-semibold text-blue-900">Organiser Account</label>
-          <div className="text-blue-800 space-y-1">
-            <p><strong>Username:</strong> {user.username}</p>
-            <p><strong>Email:</strong> {user.email}</p>
-          </div>
-          <p className="text-xs text-blue-600 italic">
-            This hackathon will be linked to your account.
-          </p>
-        </div>
-      )}
+    
 
       {/* Other fields */}
       <div className="flex flex-col gap-2">
