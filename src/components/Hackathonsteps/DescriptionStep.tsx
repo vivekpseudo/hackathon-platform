@@ -649,12 +649,6 @@ const DescriptionStep: React.FC<Props> = ({
           </div>
         )}
 
-        {!descriptionWarning && formData.description && (
-          <div className="flex gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <CheckCircle2 size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-green-800">Description looks good</p>
-          </div>
-        )}
       </div>
 
       {/* Help Documentation */}

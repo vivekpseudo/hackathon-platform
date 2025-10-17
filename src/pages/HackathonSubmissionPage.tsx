@@ -1,241 +1,487 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { createCompetitionSubmission } from '../api/competitions';
-import { toast, ToastContainer } from 'react-toastify';
-import { getAuthToken, getUser } from '../libs/storageHelper';
-import 'react-toastify/dist/ReactToastify.css';
+import React, { useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import { createCompetitionSubmission } from "../api/competitions";
+import { getAuthToken, getUser } from "../libs/storageHelper";
+import { toast, ToastContainer } from "react-toastify";
+import {
+  Trash2,
+  Plus,
+  Github,
+  Users,
+  FileText,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  Loader,
+} from "lucide-react";
+import "react-toastify/dist/ReactToastify.css";
 
+// ---------------- TYPES ----------------
 interface TeamMember {
   Name: string;
   Email: string;
-  Role: 'Leader' | 'Member';
+  Role: "Leader" | "Member";
 }
+
+interface SubmissionFormData {
+  TeamName: string;
+  GitHub: string;
+  Description: any;
+  SubmissionDate: string;
+  TeamMembers: TeamMember[];
+}
+
+// ---------------- COMPONENTS ----------------
+
+/** TipTap Rich Text Editor */
+const DescriptionEditor: React.FC<{
+  value: any;
+  onChange: (content: any) => void;
+}> = ({ value, onChange }) => {
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: value || "<p></p>",
+    onUpdate: ({ editor }) => {
+      onChange(editor.getJSON());
+    },
+  });
+
+  if (!editor) return null;
+
+  const buttonClass = (isActive: boolean) =>
+    `px-3 py-1.5 rounded text-sm transition-colors ${
+      isActive
+        ? "bg-blue-500 text-white"
+        : "text-gray-600 hover:bg-gray-100"
+    }`;
+
+  return (
+    <div className="border border-gray-300 rounded-lg overflow-hidden">
+      <div className="border-b border-gray-300 bg-gray-50 p-2 flex flex-wrap gap-1">
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={buttonClass(editor.isActive("bold"))}
+          title="Bold"
+        >
+          B
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={buttonClass(editor.isActive("italic"))}
+          title="Italic"
+        >
+          I
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          className={buttonClass(editor.isActive("strike"))}
+          title="Strike"
+        >
+          S
+        </button>
+        <div className="w-px h-6 bg-gray-300 mx-1" />
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={buttonClass(editor.isActive("bulletList"))}
+          title="Bullet List"
+        >
+          •
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={buttonClass(editor.isActive("orderedList"))}
+          title="Numbered List"
+        >
+          1.
+        </button>
+      </div>
+      <div className="p-4 min-h-[200px] bg-white focus-within:ring-2 focus-within:ring-blue-500">
+        <EditorContent editor={editor} />
+      </div>
+    </div>
+  );
+};
+
+/** Team Member Card */
+const TeamMemberCard: React.FC<{
+  member: TeamMember;
+  index: number;
+  total: number;
+  onChange: (field: string, value: string) => void;
+  onRemove: () => void;
+}> = ({ member, index, total, onChange, onRemove }) => (
+  <div className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold flex items-center justify-center">
+          {index + 1}
+        </div>
+        <h3 className="font-semibold text-gray-900">Team Member</h3>
+      </div>
+      {total > 1 && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="p-2 text-red-500 hover:bg-red-50 rounded transition-colors"
+          title="Remove member"
+        >
+          <Trash2 size={18} />
+        </button>
+      )}
+    </div>
+
+    <div className="space-y-3">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Name <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={member.Name}
+          onChange={(e) => onChange("Name", e.target.value)}
+          placeholder="Full name"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Email <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="email"
+          value={member.Email}
+          onChange={(e) => onChange("Email", e.target.value)}
+          placeholder="member@example.com"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Role
+        </label>
+        <select
+          value={member.Role}
+          onChange={(e) =>
+            onChange("Role", e.target.value as "Leader" | "Member")
+          }
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+        >
+          <option value="Leader">Leader</option>
+          <option value="Member">Member</option>
+        </select>
+      </div>
+    </div>
+  </div>
+);
+
+// ---------------- MAIN PAGE ----------------
 
 const HackathonSubmissionPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(false);
-
-  const [formData, setFormData] = useState({
-    TeamName: '',
-    GitHub: '',
-    Description: '',
-    TeamMembers: [
-      { Name: '', Email: '', Role: 'Leader' as 'Leader' | 'Member' }
-    ]
+  const [formData, setFormData] = useState<SubmissionFormData>({
+    TeamName: "",
+    GitHub: "",
+    Description: null,
+    SubmissionDate: "",
+    TeamMembers: [{ Name: "", Email: "", Role: "Leader" }],
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // ---------------- HELPERS ----------------
+  const isValidGitHubUrl = (url: string): boolean => {
+    try {
+      const u = new URL(url);
+      return u.hostname.includes("github.com");
+    } catch {
+      return false;
+    }
   };
 
-  const handleTeamMemberChange = (index: number, field: string, value: string) => {
-    setFormData(prev => {
+  const validateForm = useCallback((): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.TeamName.trim()) newErrors.TeamName = "Team name is required";
+    if (!formData.GitHub.trim())
+      newErrors.GitHub = "GitHub repository is required";
+    else if (!isValidGitHubUrl(formData.GitHub))
+      newErrors.GitHub = "Please enter a valid GitHub URL";
+
+    if (!formData.Description)
+      newErrors.Description = "Project description is required";
+
+    if (!formData.SubmissionDate)
+      newErrors.SubmissionDate = "Submission date and time is required";
+
+    const validMembers = formData.TeamMembers.filter(
+      (m) => m.Name.trim() && m.Email.trim()
+    );
+    if (validMembers.length === 0)
+      newErrors.TeamMembers = "At least one member required";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  const handleFieldChange = (field: keyof SubmissionFormData, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErr = { ...prev };
+        delete newErr[field];
+        return newErr;
+      });
+    }
+  };
+
+  const handleTeamMemberChange = (
+    index: number,
+    field: string,
+    value: string
+  ) => {
+    setFormData((prev) => {
       const updated = [...prev.TeamMembers];
       updated[index] = { ...updated[index], [field]: value };
       return { ...prev, TeamMembers: updated };
     });
   };
 
-  const addTeamMember = () => {
-    setFormData(prev => ({
+  const addTeamMember = () =>
+    setFormData((prev) => ({
       ...prev,
-      TeamMembers: [...prev.TeamMembers, { Name: '', Email: '', Role: 'Member' }]
+      TeamMembers: [...prev.TeamMembers, { Name: "", Email: "", Role: "Member" }],
     }));
-  };
 
-  const removeTeamMember = (index: number) => {
-    if (formData.TeamMembers.length > 1) {
-      setFormData(prev => ({
-        ...prev,
-        TeamMembers: prev.TeamMembers.filter((_, i) => i !== index)
-      }));
-    }
-  };
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
+  const removeTeamMember = (index: number) =>
+    setFormData((prev) => {
+      if (prev.TeamMembers.length > 1)
+        return {
+          ...prev,
+          TeamMembers: prev.TeamMembers.filter((_, i) => i !== index),
+        };
+      return prev;
+    });
 
-  try {
-    const token = getAuthToken();
-    console.log("🔑 Token exists:", !!token); // Debug
-    console.log("🔑 Token value:", token?.substring(0, 20) + "..."); // Debug (first 20 chars)
-    
-    if (!token) {
-      toast.error("You must be logged in to submit a project");
-      setLoading(false);
+  // ---------------- SUBMIT ----------------
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) {
+      toast.error("Please fix the form errors");
       return;
     }
 
-    const user = getUser();
-    console.log("👤 User:", user); // Debug
-    
-    const userEmail = user?.email;
+    setLoading(true);
 
-    const submissionData = {
-      TeamName: formData.TeamName,
-      GitHub: formData.GitHub,
-      Description: formData.Description,
-      TeamMembers: formData.TeamMembers,
-    };
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("You must be logged in to submit a project");
+        setLoading(false);
+        return;
+      }
 
-    console.log("📤 Submitting data:", submissionData); // Debug
+      const user = getUser();
+      const userEmail = user?.email;
 
-    await createCompetitionSubmission(submissionData, Number(id), userEmail);
+      const validTeamMembers = formData.TeamMembers.filter(
+        (m) => m.Name.trim() && m.Email.trim()
+      );
 
-    toast.success("Submission successful!");
+      const submissionData = {
+        TeamName: formData.TeamName,
+        GitHub: formData.GitHub,
+        Description: formData.Description,
+        SubmissionDate: new Date(formData.SubmissionDate).toISOString(), // match backend spelling
+        TeamMembers: validTeamMembers[0], // backend expects single object
+      };
 
-    setTimeout(() => {
-      navigate("/hackathons-management");
-    }, 2000);
-  } catch (error: any) {
-    console.error("❌ Submission error:", error);
-    console.error("❌ Error response:", error?.response); // Debug
-    console.error("❌ Error data:", error?.response?.data); // Debug
-    const msg = error?.response?.data?.error?.message || error.message || "Failed to submit";
-    toast.error(msg);
-  } finally {
-    setLoading(false);
-  }
-};
+      console.log("Submitting data:", JSON.stringify(submissionData, null, 2));
 
+      await createCompetitionSubmission(submissionData, Number(id), userEmail);
+
+      toast.success("Project submitted successfully!");
+      setTimeout(() => navigate("/hackathons-management"), 2000);
+    } catch (err: any) {
+      console.error("Submission error:", err);
+      toast.error(
+        err?.response?.data?.error?.message ||
+          err.message ||
+          "Failed to submit project"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------------- RENDER ----------------
   return (
-    <div className="container mx-auto py-8 px-4 max-w-3xl">
-      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+      <ToastContainer position="top-right" autoClose={4000} theme="colored" />
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-4xl font-bold text-gray-900 mb-6">
+          Submit Your Project
+        </h1>
 
-      <div className="bg-white shadow-lg rounded-lg p-8">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">Submit Your Project</h1>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Team Name */}
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">
-              Team Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.TeamName}
-              onChange={(e) => handleChange('TeamName', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter your team name"
-              required
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* TEAM DETAILS */}
+          <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
+            <div className="flex items-center gap-3 mb-4">
+              <Users className="text-blue-600" />
+              <h2 className="text-xl font-semibold">Project Details</h2>
+            </div>
 
-          {/* GitHub Link */}
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">
-              GitHub Repository <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="url"
-              value={formData.GitHub}
-              onChange={(e) => handleChange('GitHub', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="https://github.com/username/repo"
-              required
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">
-              Project Description <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              value={formData.Description}
-              onChange={(e) => handleChange('Description', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              rows={6}
-              placeholder="Describe your project, its features, and technologies used..."
-              required
-            ></textarea>
-          </div>
-
-          {/* Team Members */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <label className="block text-gray-700 font-semibold">
-                Team Members <span className="text-red-500">*</span>
+            {/* Team Name */}
+            <div>
+              <label className="font-semibold text-gray-700">
+                Team Name *
               </label>
+              <input
+                type="text"
+                value={formData.TeamName}
+                onChange={(e) => handleFieldChange("TeamName", e.target.value)}
+                className={`w-full px-4 py-2 mt-2 border rounded-lg ${
+                  errors.TeamName ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.TeamName && (
+                <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                  <AlertCircle size={16} /> {errors.TeamName}
+                </p>
+              )}
+            </div>
+
+            {/* GitHub */}
+            <div>
+              <label className="font-semibold text-gray-700">
+                GitHub Repository *
+              </label>
+              <input
+                type="url"
+                value={formData.GitHub}
+                onChange={(e) => handleFieldChange("GitHub", e.target.value)}
+                placeholder="https://github.com/username/repo"
+                className={`w-full px-4 py-2 mt-2 border rounded-lg ${
+                  errors.GitHub ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.GitHub && (
+                <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                  <AlertCircle size={16} /> {errors.GitHub}
+                </p>
+              )}
+            </div>
+
+            {/* Submission Date */}
+            <div>
+              <label className="font-semibold text-gray-700">
+                Submission Date & Time *
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.SubmissionDate}
+                onChange={(e) =>
+                  handleFieldChange("SubmissionDate", e.target.value)
+                }
+                className={`w-full px-4 py-2 mt-2 border rounded-lg ${
+                  errors.SubmissionDate ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.SubmissionDate && (
+                <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                  <AlertCircle size={16} /> {errors.SubmissionDate}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* DESCRIPTION */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <FileText /> Project Description
+            </h2>
+            <DescriptionEditor
+              value={formData.Description}
+              onChange={(val) => handleFieldChange("Description", val)}
+            />
+            {errors.Description && (
+              <p className="text-sm text-red-600 mt-2 flex items-center gap-1">
+                <AlertCircle size={16} /> {errors.Description}
+              </p>
+            )}
+          </div>
+
+          {/* TEAM MEMBERS */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Users /> Team Members
+              </h2>
               <button
                 type="button"
                 onClick={addTeamMember}
-                className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
               >
-                + Add Member
+                <Plus size={18} /> Add Member
               </button>
             </div>
 
-            {formData.TeamMembers.map((member, index) => (
-              <div key={index} className="bg-gray-50 p-4 rounded-lg mb-4 border border-gray-200">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-semibold text-gray-700">Member {index + 1}</h3>
-                  {formData.TeamMembers.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeTeamMember(index)}
-                      className="text-red-500 hover:text-red-700 text-sm font-semibold"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-gray-600 text-sm mb-1">Name</label>
-                    <input
-                      type="text"
-                      value={member.Name}
-                      onChange={(e) => handleTeamMemberChange(index, 'Name', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                      placeholder="Member name"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-600 text-sm mb-1">Email</label>
-                    <input
-                      type="email"
-                      value={member.Email}
-                      onChange={(e) => handleTeamMemberChange(index, 'Email', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                      placeholder="member@example.com"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-3">
-                  <label className="block text-gray-600 text-sm mb-1">Role</label>
-                  <select
-                    value={member.Role}
-                    onChange={(e) => handleTeamMemberChange(index, 'Role', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="Leader">Leader</option>
-                    <option value="Member">Member</option>
-                  </select>
-                </div>
+            {errors.TeamMembers && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2">
+                <AlertCircle size={18} className="text-red-600" />
+                <p className="text-sm text-red-700">{errors.TeamMembers}</p>
               </div>
-            ))}
+            )}
+
+            <div className="space-y-4">
+              {formData.TeamMembers.map((member, index) => (
+                <TeamMemberCard
+                  key={index}
+                  member={member}
+                  index={index}
+                  total={formData.TeamMembers.length}
+                  onChange={(field, val) =>
+                    handleTeamMemberChange(index, field, val)
+                  }
+                  onRemove={() => removeTeamMember(index)}
+                />
+              ))}
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-4 pt-4">
+          {/* ACTION BUTTONS */}
+          <div className="flex gap-4">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg"
             >
-              {loading ? 'Submitting...' : 'Submit Project'}
+              {loading ? (
+                <>
+                  <Loader size={20} className="animate-spin" /> Submitting...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={20} /> Submit Project
+                </>
+              )}
             </button>
             <button
               type="button"
-              onClick={() => navigate('/hackathons-management')}
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+              onClick={() => navigate("/hackathons-management")}
+              className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-900 font-bold rounded-lg"
             >
               Cancel
             </button>

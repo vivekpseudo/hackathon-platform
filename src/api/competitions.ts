@@ -24,7 +24,7 @@ type UploadResponse = {
 };
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const MAX_FILE_SIZE = 50 * 1024 * 1024; 
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 // ============== ERROR HANDLING ==============
 class ApiError extends Error {
@@ -456,21 +456,191 @@ export const createTeam = async (teamData: {
  */
 export const getTeams = async (
   competitionId?: number,
-  pageNumber: number = 0,
-  pageSize: number = 10
+  pageNumber: number = 1,
+  pageSize: number = 100
 ): Promise<ApiResponseType<any[]>> => {
-  const filters = competitionId
-    ? { filters: { competitions: { id: { $eq: competitionId } } } }
-    : {};
+  try {
+    const filters = competitionId
+      ? { filters: { competitions: { id: { $eq: competitionId } } } }
+      : {};
+
+    const params = qs.stringify({
+      ...filters,
+      pagination: { page: pageNumber, pageSize, withCount: true },
+      populate: {
+        competition_participants: {
+          populate: ['profileImage']
+        },
+        competitions: {
+          populate: ['Title']
+        },
+        teamLeader: true
+      },
+    });
+
+    console.log(`🔍 Fetching teams with params:`, params);
+    const response = await makeGetRequest(`competition-teams?${params}`);
+    console.log(`✅ Teams fetched: ${response.data?.length || 0} teams`);
+    return response as ApiResponseType<any[]>;
+  } catch (error) {
+    console.error("❌ Error fetching teams:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get a single team by ID with all relations
+ */
+export const getTeamById = async (id: number): Promise<ApiResponseType<any>> => {
+  const params = qs.stringify({ populate: "*" });
+  const response = await makeGetRequest(`competition-teams/${id}?${params}`);
+  return response as ApiResponseType<any>;
+};
+
+/**
+ * Update team details
+ */
+export const updateTeam = async (
+  id: number,
+  teamData: {
+    name?: string;
+    teamLeader?: number;
+    participantIds?: number[];
+  }
+): Promise<ApiResponseType<any>> => {
+  const payload: any = { data: {} };
+
+  if (teamData.name) payload.data.name = teamData.name;
+  if (teamData.teamLeader) payload.data.teamLeader = teamData.teamLeader;
+  if (teamData.participantIds) {
+    payload.data.competition_participants = teamData.participantIds;
+  }
+
+  const response = await makePutRequest(`competition-teams/${id}`, payload);
+  console.log(`✅ Team ${id} updated successfully`);
+  return response as ApiResponseType<any>;
+};
+
+// ============== TEAM JOIN REQUESTS ==============
+/**
+ * Request to join a team
+ */
+export const requestToJoinTeam = async (
+  teamId: number,
+  participantId: number
+): Promise<ApiResponseType<any>> => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new ApiError(401, "Unauthorized", "You must be logged in to request to join a team");
+  }
+
+  const payload = {
+    data: {
+      competition_team: teamId,
+      competition_participant: participantId,
+      status: "pending",
+      requestDate: new Date().toISOString(),
+    },
+  };
+
+  try {
+    console.log(`📤 Sending request to join team ${teamId}...`);
+    const response = await makePostRequest("team-join-requests", payload, token);
+    console.log("✅ Join request sent successfully");
+    return response as ApiResponseType<any>;
+  } catch (error) {
+    console.error("❌ Failed to send join request:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get all join requests for a specific team
+ */
+export const getTeamJoinRequests = async (
+  teamId: number,
+  status?: "pending" | "approved" | "rejected"
+): Promise<ApiResponseType<any[]>> => {
+  const filters: any = {
+    filters: { competition_team: { id: { $eq: teamId } } },
+  };
+
+  if (status) {
+    filters.filters.status = { $eq: status };
+  }
 
   const params = qs.stringify({
     ...filters,
-    pagination: { page: pageNumber, pageSize, withCount: true },
-    populate: "*",
+    populate: ["competition_team", "competition_participant"],
+    sort: ["requestDate:desc"],
   });
 
-  const response = await makeGetRequest(`competition-teams?${params}`);
+  const response = await makeGetRequest(`team-join-requests?${params}`);
   return response as ApiResponseType<any[]>;
+};
+
+/**
+ * Get all join requests from a specific participant
+ */
+export const getParticipantJoinRequests = async (
+  participantId: number
+): Promise<ApiResponseType<any[]>> => {
+  const params = qs.stringify({
+    filters: { competition_participant: { id: { $eq: participantId } } },
+    populate: ["competition_team", "competition_participant"],
+    sort: ["requestDate:desc"],
+  });
+
+  const response = await makeGetRequest(`team-join-requests?${params}`);
+  return response as ApiResponseType<any[]>;
+};
+
+/**
+ * Update join request status (approve/reject)
+ */
+export const updateJoinRequestStatus = async (
+  requestId: number,
+  status: "approved" | "rejected"
+): Promise<ApiResponseType<any>> => {
+  const payload = {
+    data: {
+      status,
+      responseDate: new Date().toISOString(),
+    },
+  };
+
+  const response = await makePutRequest(`team-join-requests/${requestId}`, payload);
+  console.log(`✅ Join request ${requestId} ${status}`);
+  return response as ApiResponseType<any>;
+};
+
+/**
+ * Approve a join request and add participant to team
+ */
+export const approveJoinRequest = async (
+  requestId: number,
+  teamId: number,
+  participantId: number
+): Promise<ApiResponseType<any>> => {
+  try {
+    // Get current team data
+    const teamResponse = await getTeamById(teamId);
+    const currentParticipants = teamResponse.data.attributes.competition_participants?.data || [];
+    const currentParticipantIds = currentParticipants.map((p: any) => p.id);
+
+    // Add new participant to team
+    const updatedParticipantIds = [...currentParticipantIds, participantId];
+    await updateTeam(teamId, { participantIds: updatedParticipantIds });
+
+    // Update request status
+    await updateJoinRequestStatus(requestId, "approved");
+
+    console.log(`✅ Participant ${participantId} added to team ${teamId}`);
+    return { data: { success: true }, meta: {} } as ApiResponseType<any>;
+  } catch (error) {
+    console.error("❌ Failed to approve join request:", error);
+    throw error;
+  }
 };
 
 // ============== REGISTRATIONS ==============
@@ -565,7 +735,7 @@ export const getUserRegistrations = async (
  * Create a competition submission
  */
 export const createCompetitionSubmission = async (
-  data: any,
+  data: any,  // This is the submissionData from frontend
   competitionId: number,
   userEmail?: string
 ) => {
@@ -574,13 +744,16 @@ export const createCompetitionSubmission = async (
     throw new ApiError(401, "Unauthorized", "You must be logged in to submit a project");
   }
 
+  // Convert the description from TipTap JSON to Strapi Blocks format
+  const convertedDescription = convertTipTapToStrapiBlocks(data.Description);
+
   const submissionPayload = {
     data: {
       TeamName: data.TeamName,
       GitHub: data.GitHub,
-      Description: data.Description,
-      TeamMembers: data.TeamMembers,
-      SubmissionDate: new Date().toISOString(),
+      Description: convertedDescription,  // Now using the converted format
+      TeamMembers: data.TeamMembers,  // Assuming this is an array; handle as per your schema
+      Submissiondate: data.SubmissionDate,  // Use the date from frontend
       competition: competitionId,
     },
   };
@@ -594,22 +767,4 @@ export const createCompetitionSubmission = async (
     console.error("❌ Submission failed:", error);
     throw error;
   }
-};
-
-/**
- * Get submissions for a competition
- */
-export const getCompetitionSubmissions = async (
-  competitionId: number,
-  pageNumber: number = 0,
-  pageSize: number = 50
-): Promise<ApiResponseType<any[]>> => {
-  const params = qs.stringify({
-    filters: { competition: { id: { $eq: competitionId } } },
-    pagination: { page: pageNumber, pageSize, withCount: true },
-    populate: "*",
-  });
-
-  const response = await makeGetRequest(`competition-submissions?${params}`);
-  return response as ApiResponseType<any[]>;
 };
