@@ -1,17 +1,16 @@
 import React, { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
+import type { Editor as TiptapEditorType } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { createCompetitionSubmission } from "../api/competitions";
-import { getAuthToken, getUser } from "../libs/storageHelper";
+import { getAuthToken } from "../libs/storageHelper";
 import { toast, ToastContainer } from "react-toastify";
 import {
   Trash2,
   Plus,
-  Github,
   Users,
   FileText,
-  Clock,
   AlertCircle,
   CheckCircle2,
   Loader,
@@ -43,7 +42,7 @@ const DescriptionEditor: React.FC<{
   const editor = useEditor({
     extensions: [StarterKit],
     content: value || "<p></p>",
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor }: { editor: TiptapEditorType }) => {
       onChange(editor.getJSON());
     },
   });
@@ -293,9 +292,6 @@ const HackathonSubmissionPage: React.FC = () => {
         return;
       }
 
-      const user = getUser();
-      const userEmail = user?.email;
-
       const validTeamMembers = formData.TeamMembers.filter(
         (m) => m.Name.trim() && m.Email.trim()
       );
@@ -310,7 +306,7 @@ const HackathonSubmissionPage: React.FC = () => {
 
       console.log("Submitting data:", JSON.stringify(submissionData, null, 2));
 
-      await createCompetitionSubmission(submissionData, Number(id), userEmail);
+      await createCompetitionSubmission(submissionData, Number(id));
 
       toast.success("Project submitted successfully!");
       setTimeout(() => navigate("/hackathons-management"), 2000);

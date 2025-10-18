@@ -82,7 +82,14 @@ const EditHackathonForm: React.FC = () => {
     try {
       setLoading(true);
       const response = await getCompetitionById(numericId);
-      const hackathon = response.data?.attributes || response.attributes;
+      // Support multiple possible response shapes from the API (e.g. { data: { attributes } }, { data: { data: { attributes } } }, or legacy)
+      const anyResp: any = response;
+      const hackathon =
+        anyResp.data?.attributes ||
+        anyResp.data?.data?.attributes ||
+        anyResp.attributes ||
+        anyResp.data ||
+        anyResp;
 
       const timelines =
         hackathon.competition_timelines?.data?.map((t: any) => t.attributes) || [
@@ -158,13 +165,6 @@ const EditHackathonForm: React.FC = () => {
     setFormData((prev: any) => ({
       ...prev,
       [parent]: { ...prev[parent], [field]: value },
-    }));
-  };
-
-  const handleChange = (field: string, value: any) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      [field]: value,
     }));
   };
 
@@ -382,7 +382,6 @@ const EditHackathonForm: React.FC = () => {
           <OrganizerStep 
             formData={formData} 
             handleNestedChange={handleNestedChange}
-            handleChange={handleChange}
           />
         );
       case 5:

@@ -186,7 +186,8 @@ export const createCompetition = async (
       try {
         const userCheckResponse = await makeGetRequest(
           `users-permissions/users?filters[email][$eq]=${encodeURIComponent(currentUser.email)}`
-        );
+        ) as any;
+
         if (userCheckResponse?.data?.length > 0) {
           userId = userCheckResponse.data[0].id;
         }
@@ -257,8 +258,9 @@ export const createCompetition = async (
     const helpDocIds: number[] = [];
     if (formData.helpDocs && Array.isArray(formData.helpDocs) && formData.helpDocs.length > 0) {
       for (const file of formData.helpDocs) {
-        if (file instanceof File) {
-          const uploadedFile = await uploadImage(file);
+        // Type guard to check if it's a File object
+        if (file && typeof file === 'object' && 'name' in file && 'size' in file) {
+          const uploadedFile = await uploadImage(file as File);
           helpDocIds.push(uploadedFile.id);
         } else if (typeof file === "number") {
           helpDocIds.push(file);
@@ -479,9 +481,9 @@ export const getTeams = async (
     });
 
     console.log(`🔍 Fetching teams with params:`, params);
-    const response = await makeGetRequest(`competition-teams?${params}`);
+    const response = await makeGetRequest(`competition-teams?${params}`) as ApiResponseType<any[]>;
     console.log(`✅ Teams fetched: ${response.data?.length || 0} teams`);
-    return response as ApiResponseType<any[]>;
+    return response;
   } catch (error) {
     console.error("❌ Error fetching teams:", error);
     throw error;
@@ -545,7 +547,7 @@ export const requestToJoinTeam = async (
 
   try {
     console.log(`📤 Sending request to join team ${teamId}...`);
-    const response = await makePostRequest("team-join-requests", payload, token);
+    const response = await makePostRequest("team-join-requests", payload);
     console.log("✅ Join request sent successfully");
     return response as ApiResponseType<any>;
   } catch (error) {
@@ -709,7 +711,7 @@ export const getUserRegistrations = async (
       populate: { competition: true, competition_team: true },
     });
 
-    const response = await makeGetRequest(`competition-registrations?${params}`);
+    const response = await makeGetRequest(`competition-registrations?${params}`) as ApiResponseType<any[]>;
 
     if (response.data && Array.isArray(response.data)) {
       const userRegistrations = response.data.filter((registration: any) => {
@@ -723,7 +725,7 @@ export const getUserRegistrations = async (
       } as ApiResponseType<any[]>;
     }
 
-    return response as ApiResponseType<any[]>;
+    return response;
   } catch (error) {
     console.error("❌ Error fetching user registrations:", error);
     throw error;
@@ -736,8 +738,7 @@ export const getUserRegistrations = async (
  */
 export const createCompetitionSubmission = async (
   data: any,  // This is the submissionData from frontend
-  competitionId: number,
-  userEmail?: string
+  competitionId: number
 ) => {
   const token = getAuthToken();
   if (!token) {
@@ -760,7 +761,7 @@ export const createCompetitionSubmission = async (
 
   try {
     console.log("📤 Submitting project...");
-    const response = await makePostRequest("competition-submissions", submissionPayload, token);
+    const response = await makePostRequest("competition-submissions", submissionPayload);
     console.log("✅ Submission successful");
     return response;
   } catch (error) {

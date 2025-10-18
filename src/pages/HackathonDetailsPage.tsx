@@ -2,28 +2,19 @@ import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useGetCompetition } from "../hooks/useCompetitions";
 import { useLocalAuth } from "../context/AuthContext"; 
-import {
-  VerticalTimeline,
-  VerticalTimelineElement,
-} from "react-vertical-timeline-component";
-import "react-vertical-timeline-component/style.min.css";
-
 
 const HackathonDetailsPage: React.FC = () => {
-  
   const { id } = useParams<{ id: string }>();
   const numericId = Number(id);
   const navigate = useNavigate();
   const { isAuthenticated } = useLocalAuth();
   const { data, isLoading, isError, error } = useGetCompetition(numericId);
 
-  // NOW you can use conditional returns
   if (isLoading) return <p>Loading hackathon details...</p>;
   if (isError) return <p>Error fetching hackathon: {error?.message || "Unknown error"}</p>;
   if (!data) return <p>No hackathon found with this ID.</p>;
 
-  // unwrap Strapi-style response
-  const hackathon = data?.data?.attributes || data?.attributes || data;
+  const hackathon = (data as any)?.data?.attributes || (data as any)?.attributes || (data as any);
 
   const handleJoinClick = () => {
     if (!isAuthenticated) {
@@ -68,56 +59,66 @@ const HackathonDetailsPage: React.FC = () => {
       {hackathon?.competition_timelines?.data?.length > 0 && (
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Timeline</h2>
-          <div className="relative left-[-35px]">
-            <VerticalTimeline
-              layout="1-column"
-              lineColor="#3b82f6"
-              className="!ml-0"
-            >
+          <div className="relative" style={{ paddingLeft: "20px" }}>
+            {/* Vertical line - aligned left with page content */}
+            <div
+              className="absolute top-0 bottom-0 w-1 bg-blue-500"
+              style={{ 
+                left: "0px", 
+                zIndex: 0,
+                height: "100%"
+              }}
+            />
+
+            {/* Timeline items */}
+            <div className="space-y-8">
               {hackathon.competition_timelines.data.map((item: any, index: number) => {
                 const { title, description, startDate, endDate } = item.attributes || {};
-                const circleColor =
-                  index === hackathon.competition_timelines.data.length - 1
-                    ? "#16cc52"
-                    : "#3b82f6";
+                const isLast = index === hackathon.competition_timelines.data.length - 1;
+                const circleColor = isLast ? "#16cc52" : "#3b82f6";
 
                 return (
-                  <VerticalTimelineElement
-                    key={item.id}
-                    date={`${startDate ? new Date(startDate).toLocaleDateString() : "TBA"} - ${endDate ? new Date(endDate).toLocaleDateString() : "TBA"
-                      }`}
-                    icon={
-                      <div className="flex items-center justify-center w-full h-full font-semibold text-white">
-                        {index + 1}
-                      </div>
-                    }
-                    iconStyle={{
-                      backgroundColor: circleColor,
-                      color: "#fff",
-                      border: "2px solid #fff",
-                    }}
-                    contentStyle={{
-                      background: "#f9f9f9",
-                      color: "#333",
-                      padding: "8px 12px",
-                      borderRadius: "8px",
-                    }}
-                    contentArrowStyle={{
-                      borderRight: "5px solid #f9f9f9",
-                    }}
-                  >
-                    {title && (
-                      <h3 className="text-base font-semibold text-gray-800 mb-1">
-                        {title}
-                      </h3>
-                    )}
-                    {description && (
-                      <p className="text-sm text-gray-600">{description}</p>
-                    )}
-                  </VerticalTimelineElement>
+                  <div key={item.id} className="relative">
+                    {/* Circle number - on the line */}
+                    <div
+                      className="absolute w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm border-2 border-white shadow-md"
+                      style={{
+                        backgroundColor: circleColor,
+                        zIndex: 10,
+                        left: "-28px",
+                        top: "0px",
+                      }}
+                    >
+                      {index + 1}
+                    </div>
+
+                    {/* Content box */}
+                    <div
+                      className="p-4 rounded-lg border border-gray-200"
+                      style={{
+                        background: "#f9f9f9",
+                        color: "#333",
+                      }}
+                    >
+                      <p className="text-xs text-gray-500 mb-2 font-medium">
+                        {startDate ? new Date(startDate).toLocaleDateString() : "TBA"} -{" "}
+                        {endDate ? new Date(endDate).toLocaleDateString() : "TBA"}
+                      </p>
+
+                      {title && (
+                        <h3 className="text-base font-semibold text-gray-800 mb-1">
+                          {title}
+                        </h3>
+                      )}
+
+                      {description && (
+                        <p className="text-sm text-gray-600">{description}</p>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
-            </VerticalTimeline>
+            </div>
           </div>
         </div>
       )}
@@ -184,7 +185,3 @@ const HackathonDetailsPage: React.FC = () => {
 };
 
 export default HackathonDetailsPage;
-
-
-
-

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useLocalAuth } from '../context/AuthContext'; // Import useAuth
+import { useLocalAuth } from '../context/AuthContext';
 
 const RegisterPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { login } = useLocalAuth(); // Get the login function
+  const { login } = useLocalAuth();
   const navigate = useNavigate();
 
   const handleSubmit = (event: { preventDefault: () => void; }) => {
@@ -18,8 +18,8 @@ const RegisterPage: React.FC = () => {
     }
     // In a real application, you would send this registration data to a backend
     console.log('Registration data:', { name, email, password });
-    // Simulate successful registration and log in as a regular user
-    login('user');
+    // Simulate successful registration and log in with email, password, and role
+    login(email, password, 'user');
     navigate('/');
   };
 

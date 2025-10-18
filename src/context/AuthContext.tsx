@@ -55,8 +55,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = (userData: any, token: string, role: string) => {
-    console.log(' AuthContext - Logging in user:', userData.email || userData.username);
+  const login = (userData: any, token: string, role: string): void => {
+    console.log('AuthContext - Logging in user:', userData.email || userData.username);
 
     // Save to localStorage
     localStorage.setItem('AUTH_TOKEN', token);
@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('User logged in with role:', role);
   };
 
-  const logout = () => {
+  const logout = (): void => {
     console.log('AuthContext - Logging out user');
     logoutHelper(); // clear localStorage
     removeAuthToken();
@@ -100,8 +100,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  const value: AuthContextType = {
+    isAuthenticated,
+    userRole,
+    user,
+    login,
+    logout,
+    checkAuth,
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userRole, user, login, logout, checkAuth }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

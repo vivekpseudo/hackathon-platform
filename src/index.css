@@ -1,1 +1,26 @@
 @import "tailwindcss";
+/* Timeline 1-column layout with number overlapping title */
+.vertical-timeline {
+  width: 100%;
+  padding: 0;
+  position: relative;
+}
+
+.vertical-timeline::before {
+  background: #3b82f6 !important; /* blue line */
+  left: 20px !important; /* line position */
+}
+
+.vertical-timeline-element {
+  margin-left: 60px !important; /* content spacing */
+}
+
+.vertical-timeline-element-content {
+  margin-left: 0 !important;
+}
+
+.vertical-timeline-element-icon {
+  left: 0 !important; /* number overlaps title */
+}
+
+

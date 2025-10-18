@@ -47,7 +47,7 @@ const HackathonManagementPage: React.FC = () => {
       const allResponse = await makeGetRequest(
         '/competitions?populate[competition_organiser][populate]=users_permissions_user&pagination[limit]=100&sort[0]=createdAt:desc'
       );
-      const allHackathons: Hackathon[] = allResponse.data || [];
+      const allHackathons: Hackathon[] = (allResponse as any)?.data || [];
 
       // 2️⃣ Fetch user registrations
       const registrationsResponse = await getUserRegistrations(user.email, 0, 1000);

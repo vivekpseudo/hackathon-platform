@@ -8,7 +8,16 @@ const HackathonsPage: React.FC = () => {
   const { getCompetitionsData } = useCompetitions();
   const { data, isSuccess } = getCompetitionsData;
 
-  const hackathons = isSuccess && data.data ? data.data.map(d => ({ ...d, ...d.attributes })) : [];
+  const hackathons = isSuccess && data.data
+    ? data.data.map((d: any) => {
+        // If the API returns Strapi-like objects with an "attributes" wrapper, merge them,
+        // otherwise return the object as-is.
+        if (d && d.attributes) {
+          return { ...d, ...d.attributes };
+        }
+        return d;
+      })
+    : [];
   console.log('Fetched competitions data:', hackathons); // Debug log
 
   return (

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { EditorContent, type Editor } from "@tiptap/react";
+import { EditorContent } from "@tiptap/react";
+import type { Editor as TiptapEditorType } from "@tiptap/core";
 import { 
   Bold, 
   Italic, 
@@ -13,18 +14,17 @@ import {
   Quote,
   X,
   Upload,
-  AlertCircle,
-  CheckCircle2
+  AlertCircle
 } from "lucide-react";
 
 interface Props {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
-  editor: Editor | null;
+  editor: TiptapEditorType | null;
 }
 
 interface MenuBarProps {
-  editor: Editor | null;
+  editor: TiptapEditorType | null;
 }
 
 /**
@@ -260,16 +260,19 @@ const DescriptionStep: React.FC<Props> = ({
   const [helpDocFiles, setHelpDocFiles] = useState<File[]>([]);
   const [descriptionWarning, setDescriptionWarning] = useState(false);
 
-  // Sync editor content with formData.description
+  // Sync editor content with formData.description - Use useCallback to prevent dependency issues
   useEffect(() => {
     if (!editor) return;
 
     const updateDescription = () => {
       const json = editor.getJSON();
-      setFormData((prev: any) => ({
-        ...prev,
-        description: json,
-      }));
+      console.log("📝 Editor content updated:", json);
+      
+      setFormData((prev: any) => {
+        const updated = { ...prev, description: json };
+        console.log("✅ FormData description set to:", updated.description);
+        return updated;
+      });
 
       // Check if description has meaningful content
       const hasContent =
@@ -279,22 +282,27 @@ const DescriptionStep: React.FC<Props> = ({
       setDescriptionWarning(!hasContent);
     };
 
+    // Subscribe to editor updates
     editor.on("update", updateDescription);
+    console.log("📌 Editor update listener attached");
 
     return () => {
       editor.off("update", updateDescription);
+      console.log("📌 Editor update listener removed");
     };
   }, [editor, setFormData]);
 
-  // Load existing description into editor
+  // Load existing description into editor on first render
   useEffect(() => {
     if (!editor || !formData.description) return;
 
     const currentContent = editor.getJSON();
     const hasContent = currentContent.content && currentContent.content.length > 0;
 
-    if (!hasContent && formData.description.content) {
+    // Only set content if editor is empty and we have description to load
+    if (!hasContent && formData.description?.content) {
       editor.commands.setContent(formData.description);
+      console.log("✅ Loaded existing description into editor");
     }
   }, [editor, formData.description]);
 
