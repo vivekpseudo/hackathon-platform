@@ -1,42 +1,89 @@
-interface HtmlContent   {
-    type: "heading" | "paragraph" | "link" | "text";
-    level?: number;
-    url?: string;
-    bold?: boolean;
-    children: HtmlContent[];
-    text?: string;
-} 
+export interface CompetitionOrganiser {
+  name: string;
+}
 
-interface Competition {
-  Title: string;
+export interface CompetitionContact {
+  contactName: string;
+  email: string;
+  phonenumber: string;
+}
+
+export interface CompetitionReward {
+  title: string;
+  rewardDesc?: string;
+  position?: string;
+  isCash?: boolean;
+  amount?: number;
+}
+
+export interface CompetitionTimeline {
+  title: string;
+  description: string;
   startDate: string;
   endDate: string;
-  isActive: true;
-  isCompleted: false;
-  createdAt: string;
-  updatedAt:string;
-  publishedAt: string;
-  type: "Online" | "Offline";
+}
+
+export interface CompetitionFormInput {
+  Title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  isCompleted: boolean;
+  type: string;
   minMember: number;
   maxMember: number;
-  feeType: "Paid" | "Free";
+  feeType: string;
   feePerMember: number;
   feePerTeam: number;
   isFeeForTeam: boolean;
-  description: Array<HtmlContent>;
+  competition_category: number[]; // IDs
+  competition_contact: {
+    contactName: string;
+    email: string;
+    phonenumber: string;
+  };
+  competition_organiser: {
+    name: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    country?: string;
+    entityType?: string;
+  };
+  competition_rewards: {
+    title: string;
+    description: string;
+    amount: string;
+    isCash: boolean;
+    position?: string;
+  }[];
+  competition_timelines: {
+    title: string;
+    description: string;
+    startDate: string;
+    endDate: string;
+    type: string;
+  }[];
+  competition_result: string;
+  helpDocs: string[];
 }
 
-// define detailed competition interface extending basic competition
-interface CompetitionDetail extends Competition {
-    competition_category: any; //TODO: define category type
-    competition_contact: any; //TODO: contact type
-    competition_organiser: any; //TODO: organiser type
-    competition_timelines: any; //TODO: timeline type
-    competition_rewards: any; //TODO: reward type
-    id: number
+
+export interface CompetitionCategory {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface ObjectResponseType<T> {
-  id: number;
-  attributes: T;
-}
+export interface CompetitionType {
+  id: string;
+  name: string; // e.g., "Online", "Offline"
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}   

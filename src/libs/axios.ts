@@ -14,24 +14,42 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log("Request config:", {
+      url: config.url,
+      method: config.method,
+      hasAuth: !!config.headers.Authorization,
+      data: config.data,
+    });
     return config;
   },
   (error) => {
     return Promise.reject(error);
   }
 );
+
 apiClient.interceptors.response.use(
   (response) => {
+    console.log("Response received:", {
+      status: response.status,
+      data: response.data,
+    });
     return response;
   },
   (error) => {
-    if (error.response.status === 401) { // unauthorized
+    console.error("Response error:", {
+      status: error?.response?.status,
+      data: error?.response?.data,
+      message: error?.message,
+    });
+    
+    if (error?.response?.status === 401) {
       removeAuthToken();
       window.location.href = "/login";
     }
     return Promise.reject(error);
   }
 );
+
 export const setAuthToken = (token: string) => {
   if (token) {
     apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
@@ -39,22 +57,23 @@ export const setAuthToken = (token: string) => {
     delete apiClient.defaults.headers.common["Authorization"];
   }
 };
+
 export const removeAuthToken = () => {
   delete apiClient.defaults.headers.common["Authorization"];
   logout();
 };
 
 export const makeGetRequest = async <T>(url: string): Promise<T> => {
-  const response = await apiClient.get(`/get-info?url=${encodeURIComponent(url)}`);
+  const response = await apiClient.get(url);
   return response.data as T;
-}
+};
 
-export const makePostRequest = (url: string, data: any, isLoginRegRequest: boolean = false) => {
-  return apiClient.post(isLoginRegRequest ? `/${url}` : `/post-info?url=${encodeURIComponent(url)}`, data);
-}
+export const makePostRequest = async <T>(url: string, data: T) => {
+  return await apiClient.post(url, data);
+};
 
 export const makePutRequest = (url: string, data: any) => {
-  return apiClient.put(`/update-info?url=${encodeURIComponent(url)}`, data);
-}
+  return apiClient.put(url, data);
+};
 
 export default apiClient;

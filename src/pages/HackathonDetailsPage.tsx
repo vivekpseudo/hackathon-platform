@@ -1,14 +1,23 @@
 import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useGetCompetition } from "../hooks/useCompetitions";
+import { useLocalAuth } from "../context/AuthContext"; 
+import {
+  VerticalTimeline,
+  VerticalTimelineElement,
+} from "react-vertical-timeline-component";
+import "react-vertical-timeline-component/style.min.css";
+
 
 const HackathonDetailsPage: React.FC = () => {
+  
   const { id } = useParams<{ id: string }>();
   const numericId = Number(id);
   const navigate = useNavigate();
-
+  const { isAuthenticated } = useLocalAuth();
   const { data, isLoading, isError, error } = useGetCompetition(numericId);
 
+  // NOW you can use conditional returns
   if (isLoading) return <p>Loading hackathon details...</p>;
   if (isError) return <p>Error fetching hackathon: {error?.message || "Unknown error"}</p>;
   if (!data) return <p>No hackathon found with this ID.</p>;
@@ -16,22 +25,11 @@ const HackathonDetailsPage: React.FC = () => {
   // unwrap Strapi-style response
   const hackathon = data?.data?.attributes || data?.attributes || data;
 
-  // check login helper
-  const isLoggedIn = !!localStorage.getItem("authToken");
-
-  const handleRegisterClick = () => {
-    if (!isLoggedIn) {
+  const handleJoinClick = () => {
+    if (!isAuthenticated) {
       navigate("/Register");
     } else {
-      console.log("User registering for hackathon:", hackathon?.Title);
-    }
-  };
-
-  const handleJoinClick = () => {
-    if (!isLoggedIn) {
-      navigate("/login");
-    } else {
-      console.log("User joining hackathon:", hackathon?.Title);
+      navigate(`/hackathon/${numericId}/join`);
     }
   };
 
@@ -70,31 +68,56 @@ const HackathonDetailsPage: React.FC = () => {
       {hackathon?.competition_timelines?.data?.length > 0 && (
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Timeline</h2>
-          <div className="relative border-l-2 border-blue-500 pl-6">
-            {hackathon.competition_timelines.data.map((item: any) => (
-              <div key={item.id} className="mb-6 relative">
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {item.attributes?.title || "No title"}
-                </h3>
-                {item.attributes?.description && (
-                  <p className="text-gray-600 mb-1">{item.attributes.description}</p>
-                )}
-                <div className="text-sm text-gray-500">
-                  <p>
-                    Start:{" "}
-                    {item.attributes?.startDate
-                      ? new Date(item.attributes.startDate).toLocaleDateString("en-US")
-                      : "TBA"}
-                  </p>
-                  <p>
-                    End:{" "}
-                    {item.attributes?.endDate
-                      ? new Date(item.attributes.endDate).toLocaleDateString("en-US")
-                      : "TBA"}
-                  </p>
-                </div>
-              </div>
-            ))}
+          <div className="relative left-[-35px]">
+            <VerticalTimeline
+              layout="1-column"
+              lineColor="#3b82f6"
+              className="!ml-0"
+            >
+              {hackathon.competition_timelines.data.map((item: any, index: number) => {
+                const { title, description, startDate, endDate } = item.attributes || {};
+                const circleColor =
+                  index === hackathon.competition_timelines.data.length - 1
+                    ? "#16cc52"
+                    : "#3b82f6";
+
+                return (
+                  <VerticalTimelineElement
+                    key={item.id}
+                    date={`${startDate ? new Date(startDate).toLocaleDateString() : "TBA"} - ${endDate ? new Date(endDate).toLocaleDateString() : "TBA"
+                      }`}
+                    icon={
+                      <div className="flex items-center justify-center w-full h-full font-semibold text-white">
+                        {index + 1}
+                      </div>
+                    }
+                    iconStyle={{
+                      backgroundColor: circleColor,
+                      color: "#fff",
+                      border: "2px solid #fff",
+                    }}
+                    contentStyle={{
+                      background: "#f9f9f9",
+                      color: "#333",
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                    }}
+                    contentArrowStyle={{
+                      borderRight: "5px solid #f9f9f9",
+                    }}
+                  >
+                    {title && (
+                      <h3 className="text-base font-semibold text-gray-800 mb-1">
+                        {title}
+                      </h3>
+                    )}
+                    {description && (
+                      <p className="text-sm text-gray-600">{description}</p>
+                    )}
+                  </VerticalTimelineElement>
+                );
+              })}
+            </VerticalTimeline>
           </div>
         </div>
       )}
@@ -142,14 +165,7 @@ const HackathonDetailsPage: React.FC = () => {
         </div>
       )}
 
-
       <div className="flex gap-4 mt-6">
-        <button
-          onClick={handleRegisterClick}
-          className="bg-blue-600 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded"
-        >
-          Register
-        </button>
         <button
           onClick={handleJoinClick}
           className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
@@ -168,7 +184,6 @@ const HackathonDetailsPage: React.FC = () => {
 };
 
 export default HackathonDetailsPage;
-
 
 
 

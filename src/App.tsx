@@ -1,37 +1,47 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import HomePage from "./pages/HomePage";
-import HackathonsPage from "./pages/HackathonsPage";
+import HackathonsPage from "./pages/HackathonsPage"; // public listing
 import HackathonDetailsPage from "./pages/HackathonDetailsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import TeamFormationPage from "./pages/TeamFormationPage";
 import SubmissionReviewPage from "./pages/SubmissionReviewPage";
 import JudgeDashboardPage from "./pages/JudgeDashboardPage";
-import HackathonManagementPage from "./pages/HackathonManagementPage";
+import AdminHackathonsPage from "./pages/AdminHackathonsPage"; // manage hackathons
 import HackathonFormPage from "./pages/HackathonFormPage";
+import HackathonManagementPage from "./pages/HackathonManagementPage";
+import HackathonSubmissionPage from './pages/HackathonSubmissionPage';
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "./context/AuthContext"; // Import AuthProvider
-import ProtectedRoute from "./ProtectedRoute"; // Import ProtectedRoute
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./ProtectedRoute";
 
-import "./App.css"; // Import your CSS file
+import "./App.css";
+import EditHackathonForm from "./pages/EditHackathonPage";
+import HackathonJoinPage from "./pages/HackathonJoinPage";
 
 function App() {
   const queryClient = new QueryClient();
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        {/* Wrap the Router with AuthProvider */}
         <Router>
           <Layout>
             <Routes>
+              {/* Public routes */}
               <Route path="/" element={<HomePage />} />
               <Route path="/hackathon-platform" element={<HomePage />} />
               <Route path="/hackathons" element={<HackathonsPage />} />
               <Route path="/hackathons/:id" element={<HackathonDetailsPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/hackathons-management" element={<HackathonManagementPage />} />
+               <Route path="/hackathons-management/:id/edit" element={<EditHackathonForm />} />
+               <Route path="/hackathon/:id/join" element={<HackathonJoinPage />} />
+               <Route path="/hackathons/:id/submission" element={<HackathonSubmissionPage />} />
+              {/* Protected routes */}
               <Route
                 path="/teams"
                 element={
@@ -56,26 +66,28 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
+              {/* Manage Hackathons page for logged-in users */}
               <Route
-                path="/admin/hackathons"
+                path="/hackathons-management"
                 element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <HackathonManagementPage />
+                  <ProtectedRoute>
+                    <AdminHackathonsPage />
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="/admin/hackathons/create"
+                path="/hackathons-management/create"
                 element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
+                  <ProtectedRoute>
                     <HackathonFormPage />
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="/admin/hackathons/:id/edit"
+                path="/hackathons-management/:id/edit"
                 element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
+                  <ProtectedRoute>
                     <HackathonFormPage />
                   </ProtectedRoute>
                 }

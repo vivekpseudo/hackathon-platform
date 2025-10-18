@@ -1,108 +1,353 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { createCompetition } from "../api/competitions";
+import { useLocalAuth } from "../context/AuthContext";
+import { CompetitionFormInput } from "../types/competition";
+import { useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-// Placeholder function to simulate fetching a hackathon for editing
-const fetchHackathon = (id: unknown) => {
-  return hackathons.find((h) => h.id === parseInt(id as string));
-};
+// Step Components
+import DescriptionStep from "../components/Hackathonsteps/DescriptionStep";
+import TimelineStep from "../components/Hackathonsteps/TimelineStep";
+import RewardsStep from "../components/Hackathonsteps/RewardsStep";
+import OrganizerStep from "../components/Hackathonsteps/OrganizerStep";
+import ContactStep from "../components/Hackathonsteps/ContactStep";
+import ReviewStep from "../components/Hackathonsteps/ReviewStep";
 
-// Placeholder data (same as in HackathonManagementPage for now)
-const hackathons = [
-  { id: 1, title: 'AI Innovation Challenge', startDate: '2025-05-10T00:00', endDate: '2025-05-15T23:59' },
-  { id: 2, title: 'Web3 Development Hackathon', startDate: '2025-05-25T00:00', endDate: '2025-05-30T23:59' },
-  { id: 3, title: 'Sustainability Hack', startDate: '2025-06-05T00:00', endDate: '2025-06-10T23:59' },
-];
+const steps = ["Description", "Timeline", "Rewards", "Organiser", "Contact", "Review"];
 
-const HackathonFormPage: React.FC = () => {
-  const { id } = useParams<{ id?: string }>();
-  const navigate = useNavigate();
-  const isEditing = !!id;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const initialHackathon = isEditing ? fetchHackathon(id) : { title: '', startDate: '', endDate: '' };
+const CreateHackathonForm: React.FC = () => {
+  const { user } = useLocalAuth();
+  const [step, setStep] = useState(1);
+  const totalSteps = steps.length;
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [createdCompetition, setCreatedCompetition] = useState<any>(null);
+  const [isPublished, setIsPublished] = useState(false);
+  const submittingRef = React.useRef(false);
 
-  const [title, setTitle] = useState(initialHackathon?.title || '');
-  const [startDate, setStartDate] = useState(initialHackathon?.startDate ? initialHackathon.startDate.slice(0, 16) : '');
-  const [endDate, setEndDate] = useState(initialHackathon?.endDate ? initialHackathon.endDate.slice(0, 16) : '');
+  const [formData, setFormData] = useState<CompetitionFormInput>({
+    Title: "",
+    description: "",
+    startDate: "",
+    endDate: "",
+    isActive: true,
+    isCompleted: false,
+    type: "Online",
+    minMember: 1,
+    maxMember: 5,
+    feeType: "Free",
+    feePerMember: 0,
+    feePerTeam: 0,
+    isFeeForTeam: false,
+    competition_category: [""],
+    competition_contact: { contactName: "", email: "", phonenumber: "" },
+    competition_organiser: {
+      name: user?.username || "",
+      email: user?.email || "",
+      addressLine1: "",
+      addressLine2: "",
+      city: "",
+      state: "",
+      pincode: "",
+      country: "",
+      entityType: "Individual",
+    },
+    competition_rewards: [
+      { title: "", description: "", amount: "", isCash: false, position: "" }
+    ],
+    competition_timelines: [
+      { title: "", description: "", startDate: "", endDate: "", type: "Online" }
+    ],
+    competition_result: "",
+    helpDocs: [],
+  });
 
-  useEffect(() => {
-    if (isEditing && !initialHackathon) {
-      // Redirect if trying to edit a non-existent hackathon (in placeholder data)
-      navigate('/admin/hackathons');
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: formData.description || "<p></p>",
+    onUpdate: ({ editor }) => setFormData((prev) => ({ ...prev, description: editor.getHTML() })),
+  });
+
+  useEffect(() => () => editor?.destroy(), [editor]);
+
+  // Generic Handlers
+  const handleChange = (field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleNestedChange = (parent: string, field: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [parent]: { ...prev[parent as keyof CompetitionFormInput], [field]: value },
+    }));
+  };
+
+  const handleArrayChange = (parent: string, index: number, value: any, field?: string) => {
+    setFormData((prev) => {
+      const updated = [...(prev[parent as keyof CompetitionFormInput] as any[])];
+      if (typeof updated[index] !== "object" || updated[index] === null) updated[index] = {};
+      if (field) updated[index] = { ...updated[index], [field]: value };
+      else updated[index] = value;
+      return { ...prev, [parent]: updated };
+    });
+  };
+
+  const addArrayItem = (parent: string, item: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [parent]: [...(prev[parent as keyof CompetitionFormInput] as any[]), item],
+    }));
+  };
+
+  const removeArrayItem = (parent: string, index: number) => {
+    setFormData((prev) => {
+      const updated = [...(prev[parent as keyof CompetitionFormInput] as any[])];
+      updated.splice(index, 1);
+      return { ...prev, [parent]: updated };
+    });
+  };
+
+  // Step Navigation
+  const nextStep = () => setStep((s) => Math.min(s + 1, totalSteps));
+  const prevStep = () => setStep((s) => Math.max(s - 1, 1));
+
+  // Manual Publish Handler
+  const handlePublish = async () => {
+    if (loading || submittingRef.current) {
+      console.log("Already submitting, ignoring duplicate submission");
+      return;
     }
-  }, [isEditing, initialHackathon, navigate]);
 
-  const handleSubmit = (event: { preventDefault: () => void; }) => {
-    event.preventDefault();
-    const hackathonData = { title, startDate, endDate };
-    if (isEditing) {
-      // In a real app, you would send an update request to the backend
-      console.log('Hackathon updated:', id, hackathonData);
-      alert(`Hackathon with ID ${id} updated!`);
-    } else {
-      // In a real app, you would send a create request to the backend
-      console.log('New hackathon created:', hackathonData);
-      alert('New hackathon created!');
+    submittingRef.current = true;
+    setLoading(true);
+    setMessage("");
+
+    try {
+      console.log("Starting hackathon creation process...");
+      console.log("Current user:", user);
+
+      // Validate user is logged in
+      if (!user?.id) {
+        setMessage("You must be logged in to create a hackathon");
+        setLoading(false);
+        submittingRef.current = false;
+        return;
+      }
+
+      // Validate required fields
+      if (!formData.Title?.trim()) {
+        setMessage("Title is required");
+        setLoading(false);
+        submittingRef.current = false;
+        return;
+      }
+
+      if (!formData.startDate || !formData.endDate) {
+        setMessage("Start Date and End Date are required");
+        setLoading(false);
+        submittingRef.current = false;
+        return;
+      }
+
+      const hasValidTimeline = formData.competition_timelines.some(
+        (t) => t.title && t.startDate && t.endDate
+      );
+
+      if (!hasValidTimeline) {
+        setMessage("At least one valid timeline is required");
+        setLoading(false);
+        submittingRef.current = false;
+        return;
+      }
+
+      toast.info("This competition will be published for everyone", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+
+      console.log("Validation passed, creating competition...");
+      console.log("Form data:", formData);
+
+      const response = await createCompetition(formData, user);
+
+      console.log("Backend response:", response);
+
+      setCreatedCompetition(response.data);
+      setMessage("Hackathon published successfully! Redirecting...");
+      setIsPublished(true);
+      submittingRef.current = false;
+      console.log("Hackathon creation complete!");
+
+      // Redirect after 2 seconds
+      setTimeout(() => {
+        window.location.href = "/hackathons-management";
+      }, 2000);
+
+    } catch (error: any) {
+      console.error("Error creating hackathon:", error);
+      const status = error?.response?.status;
+      const errorMsg = error?.response?.data?.error?.message;
+      const errorDetails = error?.response?.data?.error?.details;
+
+      let userMessage = "";
+
+      if (status === 403) {
+        userMessage = "Access forbidden. You may not have permission to create hackathons.";
+      } else if (status === 401) {
+        userMessage = "Unauthorized. Please log in again.";
+      } else if (status === 400) {
+        if (errorDetails?.errors) {
+          const errors = errorDetails.errors
+            .map((err: any) => {
+              const path = err.path?.join(".") || "unknown";
+              const message = err.message || "validation error";
+              return `${path}: ${message}`;
+            })
+            .join(", ");
+          userMessage = `Validation errors: ${errors}`;
+        } else if (errorMsg) {
+          userMessage = errorMsg;
+        } else {
+          userMessage = "Invalid data. Please check all fields.";
+        }
+      } else {
+        userMessage = errorMsg || "Failed to publish hackathon. Please try again.";
+      }
+
+      setMessage(`Error: ${userMessage}`);
+      console.error("Full error details:", { status, message: errorMsg, details: errorDetails });
+      submittingRef.current = false;
+    } finally {
+      setLoading(false);
     }
-    navigate('/admin/hackathons');
+  };
+
+  // Stepper UI
+  const renderStepper = () => (
+    <div className="flex items-center mb-6">
+      {steps.map((title, idx) => {
+        const current = idx + 1;
+        const isActive = step === current;
+        const isCompleted = step > current;
+        return (
+          <React.Fragment key={current}>
+            <div className="flex flex-col items-center">
+              <div
+                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold ${
+                  isCompleted
+                    ? "bg-blue-500 border-blue-500 text-white"
+                    : isActive
+                    ? "border-blue-500 text-blue-500"
+                    : "border-gray-300 text-gray-500"
+                }`}
+              >
+                {current}
+              </div>
+              <span className="text-xs mt-1">{title}</span>
+            </div>
+            {current !== totalSteps && (
+              <div className={`flex-1 h-1 ${current < step ? "bg-blue-500" : "bg-gray-300"}`} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+
+  // Step Forms
+  const renderStepForm = () => {
+    switch (step) {
+      case 1:
+        return <DescriptionStep formData={formData} setFormData={setFormData} editor={editor} />;
+      case 2:
+        return (
+          <TimelineStep
+            formData={formData}
+            handleArrayChange={handleArrayChange}
+            addArrayItem={addArrayItem}
+            removeArrayItem={removeArrayItem}
+          />
+        );
+      case 3:
+        return (
+          <RewardsStep
+            formData={formData}
+            handleArrayChange={handleArrayChange}
+            addArrayItem={addArrayItem}
+            removeArrayItem={removeArrayItem}
+          />
+        );
+      case 4:
+        return <OrganizerStep formData={formData} handleNestedChange={handleNestedChange} handleChange={handleChange} />;
+      case 5:
+        return <ContactStep formData={formData} handleNestedChange={handleNestedChange} />;
+      case 6:
+        return <ReviewStep formData={formData} />;
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">{isEditing ? 'Edit Hackathon' : 'Create New Hackathon'}</h1>
-      <form onSubmit={handleSubmit} className="max-w-md mx-auto bg-white shadow-md rounded-md p-6">
-        <div className="mb-4">
-          <label htmlFor="title" className="block text-gray-700 text-sm font-bold mb-2">
-            Title
-          </label>
-          <input
-            type="text"
-            id="title"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label htmlFor="startDate" className="block text-gray-700 text-sm font-bold mb-2">
-            Start Date and Time
-          </label>
-          <input
-            type="datetime-local"
-            id="startDate"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label htmlFor="endDate" className="block text-gray-700 text-sm font-bold mb-2">
-            End Date and Time
-          </label>
-          <input
-            type="datetime-local"
-            id="endDate"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            required
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            {isEditing ? 'Save Changes' : 'Create Hackathon'}
-          </button>
-          <Link to="/admin/hackathons" className="inline-block align-baseline font-semibold text-blue-500 hover:text-blue-800">
-            Cancel
-          </Link>
+    <div className="max-w-3xl mx-auto bg-white p-8 shadow rounded-lg mt-10">
+      <h1 className="text-2xl font-semibold mb-6 text-center">Create New Hackathon</h1>
+      {renderStepper()}
+
+      <form className="space-y-4">
+        {renderStepForm()}
+
+        <div className="flex justify-between mt-6">
+          {step > 1 && !isPublished && (
+            <button
+              type="button"
+              onClick={prevStep}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+              disabled={loading}
+            >
+              Back
+            </button>
+          )}
+
+          {step < totalSteps ? (
+            <button
+              type="button"
+              onClick={nextStep}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-auto"
+            >
+              Next
+            </button>
+          ) : (
+            !isPublished && (
+              <button
+                type="button"
+                onClick={handlePublish}
+                disabled={loading}
+                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400 disabled:cursor-not-allowed ml-auto"
+              >
+                {loading ? "Publishing..." : "Publish"}
+              </button>
+            )
+          )}
         </div>
       </form>
+
+      {message && (
+        <div
+          className={`mt-4 p-4 rounded-lg text-center ${
+            message.startsWith("Error")
+              ? "bg-red-100 border border-red-400 text-red-700"
+              : "bg-green-100 border border-green-400 text-green-700"
+          }`}
+        >
+          {message}
+        </div>
+      )}
+
+      <ToastContainer />
     </div>
   );
 };
 
-export default HackathonFormPage;
+export default CreateHackathonForm;
