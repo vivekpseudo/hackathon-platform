@@ -16,13 +16,21 @@ const HackathonDetailsPage: React.FC = () => {
 
   const hackathon = (data as any)?.data?.attributes || (data as any)?.attributes || (data as any);
 
-  const handleJoinClick = () => {
+    const handleJoinClick = () => {
+    // 1) If external → open external URL
+    if (hackathon?.isExternal === true && hackathon?.externalUrl) {
+      window.open(hackathon.externalUrl, "_blank");
+      return;
+    }
+
+    // 2) Else normal behavior
     if (!isAuthenticated) {
       navigate("/Register");
     } else {
       navigate(`/hackathon/${numericId}/join`);
     }
   };
+
 
   return (
     <div className="container mx-auto py-8">

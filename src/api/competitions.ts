@@ -120,7 +120,7 @@ export const uploadMultipleFiles = async (
  */
 export const getCompetitions = async (
   pageNumber: number = 0,
-  pageSize: number = 10,
+  pageSize: number = 100,
   isActive: boolean = true
 ): Promise<ApiResponseType<ObjectResponseType<Competition>[]>> => {
   const params = qs.stringify({

@@ -1,37 +1,77 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { makeGetRequest } from "../libs/axios";
 
-// Placeholder data for featured hackathons
-const featuredHackathons = [
-  {
-    id: 1,
-    title: "AI Innovation Challenge",
-    description: "Build innovative solutions using artificial intelligence.",
-    startDate: "2025-05-10",
-  },
-  {
-    id: 2,
-    title: "Web3 Development Hackathon",
-    description: "Explore the world of decentralized web applications.",
-    startDate: "2025-05-25",
-  },
-  {
-    id: 3,
-    title: "Sustainability Hack",
-    description: "Create projects focused on environmental sustainability.",
-    startDate: "2025-06-05",
-  },
-];
+interface Hackathon {
+  id: number;
+  attributes: {
+    Title: string;
+    description: any;
+    startDate: string;
+    publishedAt: string;
+    createdAt: string;
+  };
+}
 
 const HomePage: React.FC = () => {
-  // ... (featuredHackathons data remains the same)
+  const [featuredHackathons, setFeaturedHackathons] = useState<Hackathon[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchRecentHackathons();
+  }, []);
+
+  const fetchRecentHackathons = async () => {
+    try {
+      setLoading(true);
+      // Fetch recently published hackathons, sorted by creation date, limit to 3
+      const response = await makeGetRequest(
+        '/competitions?filters[publishedAt][$notNull]=true&sort[0]=createdAt:desc&pagination[limit]=3'
+      );
+      
+      const hackathons = (response as any)?.data || [];
+      setFeaturedHackathons(hackathons);
+    } catch (error) {
+      console.error('Error fetching hackathons:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper to extract description text
+  const getDescriptionText = (description: any): string => {
+    if (!description) return "No description available";
+    
+    if (typeof description === 'string') return description;
+    
+    if (typeof description === 'object' && description.content) {
+      // TipTap JSON format
+      const text = description.content
+        .map((node: any) => 
+          node.content?.map((child: any) => child.text).join(' ') || ''
+        )
+        .join(' ')
+        .trim();
+      return text || "No description available";
+    }
+    
+    if (Array.isArray(description)) {
+      // Strapi rich text format
+      return description
+        .map((block: any) => 
+          block.children?.map((child: any) => child.text).join(' ') || ''
+        )
+        .join(' ')
+        .trim() || "No description available";
+    }
+    
+    return "No description available";
+  };
 
   return (
     <div className="space-y-8">
       {/* Hero Section */}
       <section className="bg-blue-50 py-16 px-8 rounded-md shadow-md">
-        {" "}
-        {/* Lighter blue background */}
         <div className="container mx-auto text-center">
           <h1 className="text-4xl font-bold text-blue-700 mb-4">
             Unleash Your Innovation in Global Hackathons
@@ -76,36 +116,45 @@ const HomePage: React.FC = () => {
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">
           Featured Hackathons
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredHackathons.map((hackathon) => (
-            <div
-              key={hackathon.id}
-              className="bg-white rounded-md shadow-md p-6"
-            >
-              {" "}
-              {/* White card background */}
-              <h3 className="text-xl font-semibold text-blue-600 mb-2">
-                {hackathon.title}
-              </h3>
-              <p className="text-gray-600 mb-3">{hackathon.description}</p>
-              <p className="text-sm text-gray-500">
-                Starts on: {new Date(hackathon.startDate).toLocaleDateString()}
-              </p>
-              <Link
-                to={`/hackathons/${hackathon.id}`}
-                className="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4"
+        
+        {loading ? (
+          <div className="text-center py-8">
+            <p className="text-gray-600">Loading hackathons...</p>
+          </div>
+        ) : featuredHackathons.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-600">No hackathons available yet.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredHackathons.map((hackathon) => (
+              <div
+                key={hackathon.id}
+                className="bg-white rounded-md shadow-md p-6 hover:shadow-lg transition-shadow"
               >
-                Learn More
-              </Link>
-            </div>
-          ))}
-        </div>
+                <h3 className="text-xl font-semibold text-blue-600 mb-2">
+                  {hackathon.attributes.Title}
+                </h3>
+                <p className="text-gray-600 mb-3 line-clamp-2">
+                  {getDescriptionText(hackathon.attributes.description)}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Starts on: {new Date(hackathon.attributes.startDate).toLocaleDateString()}
+                </p>
+                <Link
+                  to={`/hackathons/${hackathon.id}`}
+                  className="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4"
+                >
+                  Learn More
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Why Join Us Section */}
       <section className="bg-gray-50 py-12 px-8 rounded-md shadow-md">
-        {" "}
-        {/* Very light gray background */}
         <div className="container mx-auto text-center">
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">
             Why Join Our Platform?
@@ -146,3 +195,4 @@ const HomePage: React.FC = () => {
 };
 
 export default HomePage;
+
