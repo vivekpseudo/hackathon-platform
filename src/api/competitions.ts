@@ -1,5 +1,124 @@
 import { makeGetRequest, makePostRequest, makePutRequest } from "../libs/axios";
+import { makeGetRequest, makePostRequest, makePutRequest } from "../libs/axios";
 import qs from "qs";
+import { getAuthToken } from "../libs/storageHelper";
+import axios from "axios";
+import { convertTipTapToStrapiBlocks } from "../utils/strapiBlockConverter";
+import type {
+  Competition,
+  CompetitionDetail,
+  CompetitionFormInput,
+  ObjectResponseType,
+} from "../types/competition";
+
+// ============== TYPES ==============
+type ApiResponseType<T> = {
+  data: T;
+  meta?: any;
+};
+
+type UploadResponse = {
+  id: number;
+  name: string;
+  url: string;
+  [key: string]: any;
+};
+
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+const MAX_FILE_SIZE = 50 * 1024 * 1024; 
+
+// ============== ERROR HANDLING ==============
+class ApiError extends Error {
+  constructor(
+    public status: number,
+    public statusText: string,
+    message: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+// ============== FILE UPLOAD ==============
+/**
+ * Uploads a single file to Strapi
+ * @param file - File to upload
+ * @returns Upload response with file metadata
+ */
+export const uploadImage = async (file: File): Promise<UploadResponse> => {
+  // Validate file size
+  if (file.size > MAX_FILE_SIZE) {
+    throw new ApiError(
+      400,
+      "Bad Request",
+      `File size exceeds maximum limit of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+      { filename: file.name }
+    );
+  }
+
+  const token = getAuthToken();
+  if (!token) {
+    throw new ApiError(401, "Unauthorized", "Authentication token not found");
+  }
+
+  const formData = new FormData();
+  formData.append("files", file);
+
+  try {
+    const response = await axios.post(`${API_URL}/upload`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      console.log(`✅ File uploaded: ${file.name} (ID: ${response.data[0].id})`);
+      return response.data[0];
+    }
+
+    throw new ApiError(
+      500,
+      "Internal Server Error",
+      "No file data returned from server"
+    );
+  } catch (error: any) {
+    console.error("❌ Image upload failed:", error);
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(
+      error.response?.status || 500,
+      error.response?.statusText || "Unknown Error",
+      `Failed to upload file: ${file.name}`,
+      error.response?.data
+    );
+  }
+};
+
+/**
+ * Uploads multiple files in parallel
+ * @param files - Array of files to upload
+ * @returns Array of upload responses
+ */
+export const uploadMultipleFiles = async (
+  files: File[]
+): Promise<UploadResponse[]> => {
+  if (!files || files.length === 0) return [];
+
+  try {
+    const uploadPromises = files.map((file) => uploadImage(file));
+    const results = await Promise.all(uploadPromises);
+    return results;
+  } catch (error) {
+    console.error("❌ Multiple file upload failed:", error);
+    throw error;
+  }
+};
+
+// ============== COMPETITIONS ==============
+/**
+ * Get active competitions with pagination
+ */
 import { getAuthToken } from "../libs/storageHelper";
 import axios from "axios";
 import { convertTipTapToStrapiBlocks } from "../utils/strapiBlockConverter";
@@ -125,6 +244,7 @@ export const getCompetitions = async (
 ): Promise<ApiResponseType<ObjectResponseType<Competition>[]>> => {
   const params = qs.stringify({
     sort: ["startDate:desc"],
+    pagination: { page: pageNumber, pageSize, withCount: true },
     pagination: { page: pageNumber, pageSize, withCount: true },
     filters: { isActive },
   });
@@ -311,10 +431,17 @@ export const createCompetition = async (
     return response as ApiResponseType<ObjectResponseType<CompetitionDetail>>;
   } catch (error) {
     console.error("❌ Error creating competition:", error);
+    console.error("❌ Error creating competition:", error);
     throw error;
   }
 };
 
+/**
+ * Update an existing competition
+ */
+export const updateCompetition = async (
+  id: number,
+  formData: Partial<CompetitionFormInput>
 /**
  * Update an existing competition
  */

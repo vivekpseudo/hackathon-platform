@@ -24,15 +24,46 @@ export interface CompetitionTimeline {
 }
 
 export interface CompetitionFormInput {
+export interface CompetitionOrganiser {
+  name: string;
+}
+
+export interface CompetitionContact {
+  contactName: string;
+  email: string;
+  phonenumber: string;
+}
+
+export interface CompetitionReward {
+  title: string;
+  rewardDesc?: string;
+  position?: string;
+  isCash?: boolean;
+  amount?: number;
+}
+
+export interface CompetitionTimeline {
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface CompetitionFormInput {
   Title: string;
+  description: string;
   description: string;
   startDate: string;
   endDate: string;
   isActive: boolean;
   isCompleted: boolean;
   type: string;
+  isActive: boolean;
+  isCompleted: boolean;
+  type: string;
   minMember: number;
   maxMember: number;
+  feeType: string;
   feeType: string;
   feePerMember: number;
   feePerTeam: number;

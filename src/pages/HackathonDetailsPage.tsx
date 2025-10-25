@@ -4,12 +4,15 @@ import { useGetCompetition } from "../hooks/useCompetitions";
 import { useLocalAuth } from "../context/AuthContext"; 
 
 const HackathonDetailsPage: React.FC = () => {
+  
   const { id } = useParams<{ id: string }>();
   const numericId = Number(id);
   const navigate = useNavigate();
   const { isAuthenticated } = useLocalAuth();
+  const { isAuthenticated } = useLocalAuth();
   const { data, isLoading, isError, error } = useGetCompetition(numericId);
 
+  // NOW you can use conditional returns
   if (isLoading) return <p>Loading hackathon details...</p>;
   if (isError) return <p>Error fetching hackathon: {error?.message || "Unknown error"}</p>;
   if (!data) return <p>No hackathon found with this ID.</p>;
@@ -27,6 +30,7 @@ const HackathonDetailsPage: React.FC = () => {
     if (!isAuthenticated) {
       navigate("/Register");
     } else {
+      navigate(`/hackathon/${numericId}/join`);
       navigate(`/hackathon/${numericId}/join`);
     }
   };

@@ -15,13 +15,33 @@ const safeParse = (value: string | null) => {
 const getAuthToken = () => rawGetAuthToken();
 const getUser = () => safeParse(localStorage.getItem('USER'));
 const getUserRole = () => safeParse(localStorage.getItem('ROLE'));
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { getAuthToken as rawGetAuthToken, logout as logoutHelper } from '../libs/storageHelper';
+import { setAuthToken as setAxiosAuthToken, removeAuthToken } from '../libs/axios';
+
+// Safe localStorage parsing
+const safeParse = (value: string | null) => {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+};
+
+// Wrapper functions
+const getAuthToken = () => rawGetAuthToken();
+const getUser = () => safeParse(localStorage.getItem('USER'));
+const getUserRole = () => safeParse(localStorage.getItem('ROLE'));
 
 interface AuthContextType {
   isAuthenticated: boolean;
   userRole: string | null;
   user: any | null;
   login: (userData: any, token: string, role: string) => void;
+  user: any | null;
+  login: (userData: any, token: string, role: string) => void;
   logout: () => void;
+  checkAuth: () => void;
   checkAuth: () => void;
 }
 
@@ -65,7 +85,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsAuthenticated(true);
     setUser(userData);
+    setUser(userData);
     setUserRole(role);
+    setAxiosAuthToken(token);
+
     setAxiosAuthToken(token);
 
     console.log('User logged in with role:', role);
@@ -78,7 +101,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsAuthenticated(false);
     setUser(null);
+    setUser(null);
     setUserRole(null);
+
 
     console.log('User logged out');
 
@@ -117,7 +142,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 export const useLocalAuth = () => {
+export const useLocalAuth = () => {
   const context = useContext(AuthContext);
+  if (!context) throw new Error('useLocalAuth must be used within an AuthProvider');
   if (!context) throw new Error('useLocalAuth must be used within an AuthProvider');
   return context;
 };

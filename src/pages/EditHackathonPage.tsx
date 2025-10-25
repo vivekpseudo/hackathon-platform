@@ -17,11 +17,82 @@ import ContactStep from '../components/Hackathonsteps/ContactStep';
 import ReviewStep from '../components/Hackathonsteps/ReviewStep';
 
 const steps = ['Description', 'Timeline', 'Rewards', 'Organiser', 'Contact', 'Review'];
+import { useParams, useNavigate } from 'react-router-dom';
+import { getCompetitionById } from '../api/competitions';
+import { makePutRequest, makePostRequest } from '../libs/axios';
+import { useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { toast, ToastContainer } from 'react-toastify';
+import { useLocalAuth } from '../context/AuthContext';
+import 'react-toastify/dist/ReactToastify.css';
 
+// Step Components
+import DescriptionStep from '../components/Hackathonsteps/DescriptionStep';
+import TimelineStep from '../components/Hackathonsteps/TimelineStep';
+import RewardsStep from '../components/Hackathonsteps/RewardsStep';
+import OrganizerStep from '../components/Hackathonsteps/OrganizerStep';
+import ContactStep from '../components/Hackathonsteps/ContactStep';
+import ReviewStep from '../components/Hackathonsteps/ReviewStep';
+
+const steps = ['Description', 'Timeline', 'Rewards', 'Organiser', 'Contact', 'Review'];
+
+const EditHackathonForm: React.FC = () => {
 const EditHackathonForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const numericId = Number(id);
+  const numericId = Number(id);
   const navigate = useNavigate();
+  const { user } = useLocalAuth();
+
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState<any>({
+    Title: '',
+    description: null,
+    startDate: '',
+    endDate: '',
+    isActive: true,
+    isCompleted: false,
+    type: 'Online',
+    minMember: 1,
+    maxMember: 5,
+    feeType: 'Free',
+    feePerMember: 0,
+    feePerTeam: 0,
+    isFeeForTeam: false,
+    competition_category: [''],
+    competition_contact: { contactName: '', email: '', phonenumber: '' },
+    competition_organiser: {
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      pincode: '',
+      country: '',
+      entityType: 'Individual',
+      users_permissions_user: null,
+    },
+    competition_rewards: [{ title: '', description: '', amount: '', isCash: false, position: '' }],
+    competition_timelines: [{ title: '', description: '', startDate: '', endDate: '', type: 'Online' }],
+    competition_result: '',
+    helpDocs: [],
+  });
+
+  // ✅ TipTap editor with JSON output (not HTML)
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: '',
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm max-w-none focus:outline-none min-h-[200px]',
+      },
+    },
+  });
+
+  useEffect(() => {
+    if (numericId) fetchHackathonData();
+  }, [numericId]);
   const { user } = useLocalAuth();
 
   const [step, setStep] = useState(1);
@@ -437,11 +508,71 @@ const EditHackathonForm: React.FC = () => {
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
           )}
+        );
+      case 5:
+        return <ContactStep formData={formData} handleNestedChange={handleNestedChange} />;
+      case 6:
+        return <ReviewStep formData={formData} />;
+      default:
+        return null;
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="container mx-auto py-8 px-4 text-center">
+        <p className="text-gray-600">Loading hackathon...</p>
+      </div>
+    );
+
+  return (
+    <div className="max-w-3xl mx-auto bg-white p-8 shadow rounded-lg mt-10">
+      <h1 className="text-2xl font-semibold mb-6 text-center">Edit Hackathon</h1>
+      {renderStepper()}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {renderStepForm()}
+
+        <div className="flex justify-between mt-6">
+          {step > 1 && (
+            <button
+              type="button"
+              onClick={prevStep}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+            >
+              Back
+            </button>
+          )}
+
+          {step < steps.length ? (
+            <button
+              type="button"
+              onClick={nextStep}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-auto"
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSaveClick}
+              disabled={saving}
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400 disabled:cursor-not-allowed ml-auto"
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          )}
         </div>
       </form>
 
       <ToastContainer position="top-right" autoClose={2000} theme="colored" />
+
+      <ToastContainer position="top-right" autoClose={2000} theme="colored" />
     </div>
+  );
+};
+
+export default EditHackathonForm;
   );
 };
 
