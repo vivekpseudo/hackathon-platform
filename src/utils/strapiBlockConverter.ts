@@ -1,8 +1,3 @@
-/**
- * Converts TipTap JSON format to Strapi v4 Blocks editor format
- * Strapi Blocks expect a specific structure with type, children, and attributes
- */
-
 interface TipTapNode {
   type: string;
   content?: TipTapNode[];
@@ -12,21 +7,12 @@ interface TipTapNode {
   level?: number;
 }
 
-interface TextNode {
-  type: "text";
-  text: string;
-  bold?: boolean;
-  italic?: boolean;
-  underline?: boolean;
-  strikethrough?: boolean;
-  code?: boolean;
-}
-
 interface StrapiBlockChild {
   type: string;
   text?: string;
   bold?: boolean;
   italic?: boolean;
+  underline?: boolean;
   strikethrough?: boolean;
   code?: boolean;
 }

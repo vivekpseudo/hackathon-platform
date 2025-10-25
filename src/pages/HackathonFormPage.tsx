@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { createCompetition } from "../api/competitions";
 import { useLocalAuth } from "../context/AuthContext";
 import { CompetitionFormInput } from "../types/competition";
-import { useEditor } from "@tiptap/react";
+import { useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import type { Editor as TiptapEditorType } from "@tiptap/core";
 
 // Step Components
 import DescriptionStep from "../components/Hackathonsteps/DescriptionStep";
@@ -23,7 +24,6 @@ const CreateHackathonForm: React.FC = () => {
   const totalSteps = steps.length;
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [createdCompetition, setCreatedCompetition] = useState<any>(null);
   const [isPublished, setIsPublished] = useState(false);
   const submittingRef = React.useRef(false);
 
@@ -41,11 +41,10 @@ const CreateHackathonForm: React.FC = () => {
     feePerMember: 0,
     feePerTeam: 0,
     isFeeForTeam: false,
-    competition_category: [""],
+    competition_category: [1],
     competition_contact: { contactName: "", email: "", phonenumber: "" },
     competition_organiser: {
       name: user?.username || "",
-      email: user?.email || "",
       addressLine1: "",
       addressLine2: "",
       city: "",
@@ -67,21 +66,21 @@ const CreateHackathonForm: React.FC = () => {
   const editor = useEditor({
     extensions: [StarterKit],
     content: formData.description || "<p></p>",
-    onUpdate: ({ editor }) => setFormData((prev) => ({ ...prev, description: editor.getHTML() })),
+    onUpdate: ({ editor }: { editor: TiptapEditorType }) => setFormData((prev) => ({ ...prev, description: editor.getHTML() })),
   });
 
   useEffect(() => () => editor?.destroy(), [editor]);
 
-  // Generic Handlers
-  const handleChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+ 
 
   const handleNestedChange = (parent: string, field: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [parent]: { ...prev[parent as keyof CompetitionFormInput], [field]: value },
-    }));
+    setFormData((prev) => {
+      const parentValue = prev[parent as keyof CompetitionFormInput];
+      return {
+        ...prev,
+        [parent]: { ...(typeof parentValue === 'object' && parentValue !== null ? parentValue : {}), [field]: value },
+      };
+    });
   };
 
   const handleArrayChange = (parent: string, index: number, value: any, field?: string) => {
@@ -174,7 +173,6 @@ const CreateHackathonForm: React.FC = () => {
 
       console.log("Backend response:", response);
 
-      setCreatedCompetition(response.data);
       setMessage("Hackathon published successfully! Redirecting...");
       setIsPublished(true);
       submittingRef.current = false;
@@ -280,7 +278,7 @@ const CreateHackathonForm: React.FC = () => {
           />
         );
       case 4:
-        return <OrganizerStep formData={formData} handleNestedChange={handleNestedChange} handleChange={handleChange} />;
+        return <OrganizerStep formData={formData} handleNestedChange={handleNestedChange} />;
       case 5:
         return <ContactStep formData={formData} handleNestedChange={handleNestedChange} />;
       case 6:
@@ -346,8 +344,23 @@ const CreateHackathonForm: React.FC = () => {
       )}
 
       <ToastContainer />
+
+      {message && (
+        <div
+          className={`mt-4 p-4 rounded-lg text-center ${
+            message.startsWith("Error")
+              ? "bg-red-100 border border-red-400 text-red-700"
+              : "bg-green-100 border border-green-400 text-green-700"
+          }`}
+        >
+          {message}
+        </div>
+      )}
+
+      <ToastContainer />
     </div>
   );
 };
 
+export default CreateHackathonForm;
 export default CreateHackathonForm;

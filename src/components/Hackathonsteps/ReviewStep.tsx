@@ -20,7 +20,7 @@ const TipTapRenderer: React.FC<{ content: any }> = ({ content }) => {
 
     // Handle text nodes
     if (node.type === 'text') {
-      let text = node.text || '';
+      let text: React.ReactNode = node.text || '';
       
       if (node.marks) {
         node.marks.forEach((mark: any) => {
@@ -47,18 +47,27 @@ const TipTapRenderer: React.FC<{ content: any }> = ({ content }) => {
     // Handle headings
     if (node.type === 'heading') {
       const level = node.attrs?.level || 2;
-      const Tag = `h${level}` as keyof JSX.IntrinsicElements;
       const className = level === 1 
         ? "text-2xl font-bold mb-3" 
         : level === 2 
         ? "text-xl font-bold mb-2" 
         : "text-lg font-semibold mb-2";
       
-      return (
-        <Tag key={index} className={className}>
-          {node.content?.map((child: any, idx: number) => renderNode(child, idx))}
-        </Tag>
-      );
+      const children = node.content?.map((child: any, idx: number) => renderNode(child, idx));
+      
+      if (level === 1) {
+        return <h1 key={index} className={className}>{children}</h1>;
+      } else if (level === 2) {
+        return <h2 key={index} className={className}>{children}</h2>;
+      } else if (level === 3) {
+        return <h3 key={index} className={className}>{children}</h3>;
+      } else if (level === 4) {
+        return <h4 key={index} className={className}>{children}</h4>;
+      } else if (level === 5) {
+        return <h5 key={index} className={className}>{children}</h5>;
+      } else {
+        return <h6 key={index} className={className}>{children}</h6>;
+      }
     }
 
     // Handle bullet list
@@ -167,7 +176,6 @@ const BlocksRenderer: React.FC<{ blocks: any }> = ({ blocks }) => {
         
         if (block.type === "heading") {
           const level = block.level || 2;
-          const Tag = `h${level}` as keyof JSX.IntrinsicElements;
           const text = block.children?.map((child: any) => child.text).join("");
           const className = level === 1 
             ? "text-2xl font-bold mb-3" 
@@ -175,7 +183,19 @@ const BlocksRenderer: React.FC<{ blocks: any }> = ({ blocks }) => {
             ? "text-xl font-bold mb-2" 
             : "text-lg font-semibold mb-2";
           
-          return React.createElement(Tag, { key: idx, className }, text);
+          if (level === 1) {
+            return <h1 key={idx} className={className}>{text}</h1>;
+          } else if (level === 2) {
+            return <h2 key={idx} className={className}>{text}</h2>;
+          } else if (level === 3) {
+            return <h3 key={idx} className={className}>{text}</h3>;
+          } else if (level === 4) {
+            return <h4 key={idx} className={className}>{text}</h4>;
+          } else if (level === 5) {
+            return <h5 key={idx} className={className}>{text}</h5>;
+          } else {
+            return <h6 key={idx} className={className}>{text}</h6>;
+          }
         }
         
         if (block.type === "list") {
@@ -309,8 +329,6 @@ const ReviewStep: React.FC<Props> = ({ formData }) => {
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Timeline</h2>
           <div className="relative left-[-35px]">
             <VerticalTimeline
-              layout="1-column"
-              lineColor="#3b82f6"
               className="!ml-0"
             >
               {formData.competition_timelines.map((item: any, index: number) => {

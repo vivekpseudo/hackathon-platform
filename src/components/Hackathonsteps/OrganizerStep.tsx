@@ -4,10 +4,9 @@ import { useLocalAuth } from "../../context/AuthContext";
 interface Props {
   formData: any;
   handleNestedChange: (parent: string, field: string, value: any) => void;
-  handleChange: (field: string, value: any) => void;
 }
 
-const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange, handleChange }) => {
+const OrganizerStep: React.FC<Props> = ({ formData, handleNestedChange }) => {
   const { user } = useLocalAuth();
 
   useEffect(() => {

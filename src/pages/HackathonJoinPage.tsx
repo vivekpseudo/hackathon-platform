@@ -34,7 +34,7 @@ const HackathonJoinPage: React.FC = () => {
   if (isError) return <p>Error fetching hackathon: {error?.message || "Unknown error"}</p>;
   if (!data) return <p>No hackathon found with this ID.</p>;
 
-  const hackathon = data?.data?.attributes || data?.attributes || data;
+  const hackathon = (data as any)?.data?.attributes || (data as any)?.attributes || data;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getCompetitionById, getCompetitions } from "../api/competitions";
 
-export const useCompetitions = (pageNumber = 0, pageSize = 10) => {
+export const useCompetitions = (pageNumber = 0, pageSize = 100) => {
   const getCompetitionsData = useQuery({
     queryKey: ["competitions"],
     queryFn: () => getCompetitions(pageNumber, pageSize),
